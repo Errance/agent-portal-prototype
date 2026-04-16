@@ -15,27 +15,35 @@ export default function StatCard({ label, value, unit, changePercent }: StatCard
 
   return (
     <Box
-      bg="bg.200"
       border="1px solid"
       borderColor="border.100"
-      borderRadius="xl"
-      p={5}
+      borderRadius="12px"
+      p="17px"
       flex={1}
       minW="180px"
     >
-      <Text fontSize="xs" color="gray.100" mb={2}>{label}</Text>
-      <Flex align="baseline" gap={2}>
-        <Text fontSize="2xl" fontWeight="700" fontFamily="ISB" color="text.100">
+      <Box
+        borderBottom="1px solid"
+        borderColor="border.100"
+        pb="9px"
+        mb="2px"
+      >
+        <Text fontSize="14px" color="gray.100" lineHeight="22px">{label}</Text>
+      </Box>
+
+      <Flex align="baseline" gap={2} pt="5px">
+        <Text fontSize="24px" fontWeight="700" fontFamily="ISB" color="text.100" lineHeight="33.6px">
           {formatted}
         </Text>
-        {unit && <Text fontSize="xs" color="gray.200">{unit}</Text>}
+        {unit && <Text fontSize="12px" color="gray.200">{unit}</Text>}
       </Flex>
+
       {changePercent !== undefined && (
-        <Flex align="center" gap={1} mt={2}>
-          <Text fontSize="xs" color={isPositive ? 'theme' : 'red.100'} fontFamily="ISB">
-            {isPositive ? '▲' : '▼'} {Math.abs(changePercent).toFixed(1)}%
+        <Flex align="center" gap={1} mt="2px">
+          <Text fontSize="12px" color="gray.200">较昨日</Text>
+          <Text fontSize="11px" color="gray.200" fontFamily="ISB">
+            {isPositive ? '▲' : '▼'} {Math.abs(changePercent).toFixed(2)}%
           </Text>
-          <Text fontSize="xs" color="gray.200">较昨日</Text>
         </Flex>
       )}
     </Box>

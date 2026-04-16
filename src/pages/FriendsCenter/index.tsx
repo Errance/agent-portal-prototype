@@ -51,10 +51,10 @@ export default function FriendsCenter() {
     {
       key: 'uid', label: 'UID',
       render: r => (
-        <Text color={r.isSelf ? 'theme' : 'text.200'} fontFamily={r.isSelf ? 'ISB' : undefined}>
+        <Text color={r.isSelf ? 'theme' : 'text.100'} fontFamily={r.isSelf ? 'ISB' : undefined}>
           {r.isSelf ? '我自己' : r.uid}
           {r.isSelf && selfRebateEnabled && (
-            <Text as="span" fontSize="xs" color="gray.100" ml={2}>
+            <Text as="span" fontSize="12px" color="gray.100" ml={2}>
               自返佣: {r.selfRebateAmount?.toFixed(2)} USDT
             </Text>
           )}
@@ -71,8 +71,8 @@ export default function FriendsCenter() {
       render: r => r.isSelf ? null : (
         <Box
           as="button"
-          fontSize="xs"
-          color={isFrozen ? 'gray.200' : 'theme'}
+          fontSize="14px"
+          color={isFrozen ? 'gray.100' : 'theme'}
           fontFamily="ISB"
           cursor={isFrozen ? 'not-allowed' : 'pointer'}
           onClick={() => {
@@ -102,30 +102,31 @@ export default function FriendsCenter() {
       key: 'action', label: '操作',
       render: r => (
         <Link to={`/revenue?source_uid=${r.uid}`}>
-          <Text fontSize="xs" color="theme" fontFamily="ISB" cursor="pointer">查看贡献明细</Text>
+          <Text fontSize="14px" color="theme" fontFamily="ISB" cursor="pointer">查看贡献明细</Text>
         </Link>
       ),
     },
   ]
 
+  const tabTrigger = (val: string, label: string) => (
+    <Tabs.Trigger value={val} px="16px" py="12px" fontSize="14px"
+      color={tab === val ? 'nav.active' : 'nav.inactive'}
+      fontFamily="ISB" bg="transparent" border="none"
+      _hover={{ color: 'nav.active' }}>
+      {label}
+    </Tabs.Trigger>
+  )
+
   return (
     <Box>
       <Tabs.Root value={tab} onValueChange={e => setTab(e.value)}>
-        <Tabs.List borderBottom="1px solid" borderColor="border.100" mb={4}>
-          <Tabs.Trigger value="0" px={4} py={3} fontSize="sm" color={tab === '0' ? 'text.100' : 'gray.100'}
-            fontFamily={tab === '0' ? 'ISB' : undefined}
-            borderBottom="2px solid" borderColor={tab === '0' ? 'theme' : 'transparent'} _hover={{ color: 'text.100' }}>
-            直接邀请人
-          </Tabs.Trigger>
-          <Tabs.Trigger value="1" px={4} py={3} fontSize="sm" color={tab === '1' ? 'text.100' : 'gray.100'}
-            fontFamily={tab === '1' ? 'ISB' : undefined}
-            borderBottom="2px solid" borderColor={tab === '1' ? 'theme' : 'transparent'} _hover={{ color: 'text.100' }}>
-            子代理概览
-          </Tabs.Trigger>
+        <Tabs.List borderBottom="1px solid" borderColor="border.100" mb="16px">
+          {tabTrigger('0', '直接邀请人')}
+          {tabTrigger('1', '子代理概览')}
         </Tabs.List>
 
         <Tabs.Content value="0">
-          <Flex gap={4} mb={4} flexWrap="wrap">
+          <Flex gap="16px" mb="16px" flexWrap="wrap">
             {globalStats.map(s => <StatCard key={s.label} label={s.label} value={s.value} />)}
           </Flex>
 
@@ -139,7 +140,7 @@ export default function FriendsCenter() {
           </FilterBar>
 
           {hasFilter && (
-            <Box mb={4}>
+            <Box mb="16px">
               <FilteredStatsPanel title="筛选结果统计" stats={filteredStats} />
             </Box>
           )}
@@ -148,7 +149,7 @@ export default function FriendsCenter() {
         </Tabs.Content>
 
         <Tabs.Content value="1">
-          <Box mb={4}>
+          <Box mb="16px">
             <FilteredStatsPanel title="全局统计" stats={subAgentGlobalStats} />
           </Box>
           <DataTable data={subAgents} columns={subAgentColumns} />
@@ -159,26 +160,27 @@ export default function FriendsCenter() {
         <Box position="fixed" inset={0} bg="rgba(0,0,0,0.3)" zIndex={300} onClick={() => setEditUid(null)}>
           <Box
             position="fixed" top="50%" left="50%" transform="translate(-50%,-50%)"
-            bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={6} w="400px"
-            boxShadow="0 8px 32px rgba(0,0,0,0.1)"
+            bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="12px" p="24px" w="400px"
+            boxShadow="0 8px 32px rgba(0,0,0,0.08)"
             onClick={e => e.stopPropagation()}
           >
-            <Text fontFamily="ISB" mb={4}>编辑备注 — {editUid}</Text>
+            <Text fontFamily="ISB" fontSize="16px" mb="16px">编辑备注 — {editUid}</Text>
             <Box
               as="input" w="100%" h="40px" bg="bg.100" border="1px solid" borderColor="border.100"
-              borderRadius="md" px={3} fontSize="sm" color="text.200" outline="none"
+              borderRadius="6px" px={3} fontSize="14px" color="text.100" outline="none"
               value={editVal}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditVal(e.target.value)}
               _focus={{ borderColor: 'theme' }}
             />
-            <Flex justify="flex-end" gap={2} mt={4}>
-              <Box as="button" px={4} py={2} bg="bg.300" color="text.200" border="1px solid" borderColor="border.100"
-                borderRadius="md" fontSize="sm" cursor="pointer" onClick={() => setEditUid(null)}>取消</Box>
-              <Box as="button" px={4} py={2} bg="theme" color="#fff" borderRadius="md" fontSize="sm"
+            <Flex justify="flex-end" gap="8px" mt="16px">
+              <Box as="button" px="16px" py="8px" bg="bg.200" color="text.100" border="1px solid" borderColor="border.100"
+                borderRadius="6px" fontSize="14px" cursor="pointer" onClick={() => setEditUid(null)}
+                _hover={{ bg: 'bg.100' }}>取消</Box>
+              <Box as="button" px="16px" py="8px" bg="nav.bg" color="#fff" borderRadius="6px" fontSize="14px"
                 fontFamily="ISB" cursor="pointer" onClick={() => {
                   setRemarks(prev => ({ ...prev, [editUid]: editVal }))
                   setEditUid(null)
-                }}>保存</Box>
+                }} _hover={{ opacity: 0.85 }}>保存</Box>
             </Flex>
           </Box>
         </Box>

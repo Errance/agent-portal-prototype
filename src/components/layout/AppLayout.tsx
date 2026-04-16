@@ -1,4 +1,4 @@
-import { Box, Flex, Text, HStack } from '@chakra-ui/react'
+import { Box, Flex, Text } from '@chakra-ui/react'
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import FrozenBanner from './FrozenBanner'
 import GlobalFooter from './GlobalFooter'
@@ -28,46 +28,63 @@ export default function AppLayout() {
 
   return (
     <Flex minH="100vh" flexDir="column" bg="bg.100">
+      <Box as="header" bg="bg.200" w="100%" h="72px" flexShrink={0}>
+        <Flex h="100%" align="center" px="40px" maxW="100%">
+          <Text
+            fontFamily="ISB"
+            fontSize="20px"
+            color="theme"
+            letterSpacing="-0.5px"
+            cursor="pointer"
+            onClick={() => navigate('/')}
+            flexShrink={0}
+          >
+            TurboFlow
+          </Text>
+
+          <Box w="1px" h="24px" bg="border.200" mx="28px" flexShrink={0} />
+
+          <Flex gap="32px" align="center" flex={1} overflow="auto">
+            {visibleTabs.map(tab => {
+              const isActive = tab.path === '/'
+                ? location.pathname === '/'
+                : location.pathname.startsWith(tab.path)
+              return (
+                <Text
+                  key={tab.path}
+                  as="button"
+                  fontSize="16px"
+                  fontFamily="ISB"
+                  color={isActive ? 'nav.active' : 'nav.inactive'}
+                  bg="transparent"
+                  border="none"
+                  cursor="pointer"
+                  whiteSpace="nowrap"
+                  lineHeight="16px"
+                  transition="color 0.15s"
+                  _hover={{ color: 'nav.active' }}
+                  onClick={() => navigate(tab.path)}
+                >
+                  {tab.label}
+                </Text>
+              )
+            })}
+          </Flex>
+        </Flex>
+      </Box>
+
       {isFrozen && <FrozenBanner />}
+
       <Box
         as="main"
-        maxW="1400px"
+        maxW="1920px"
         w="100%"
         mx="auto"
-        px={{ base: 2.5, sm: 5, xl: 10 }}
-        pt={{ base: 4, md: 6, xl: 8 }}
+        px="120px"
+        pt="24px"
         pb={4}
         flex={1}
       >
-        <HStack gap={0} mb={6} borderBottom="1px solid" borderColor="border.100">
-          {visibleTabs.map(tab => {
-            const isActive = tab.path === '/'
-              ? location.pathname === '/'
-              : location.pathname.startsWith(tab.path)
-            return (
-              <Box
-                key={tab.path}
-                as="button"
-                px={4}
-                py={3}
-                fontSize="sm"
-                fontWeight={isActive ? '600' : '400'}
-                fontFamily={isActive ? 'ISB' : undefined}
-                color={isActive ? 'text.100' : 'gray.100'}
-                borderBottom="2px solid"
-                borderColor={isActive ? 'theme' : 'transparent'}
-                bg="transparent"
-                cursor="pointer"
-                transition="all 0.15s"
-                _hover={{ color: 'text.100' }}
-                onClick={() => navigate(tab.path)}
-              >
-                {tab.label}
-              </Box>
-            )
-          })}
-        </HStack>
-
         <Outlet />
         <GlobalFooter />
       </Box>

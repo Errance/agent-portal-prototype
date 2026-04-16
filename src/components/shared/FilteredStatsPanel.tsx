@@ -19,22 +19,21 @@ export default function FilteredStatsPanel({ title, stats }: FilteredStatsPanelP
 
   return (
     <Box
-      bg="bg.200"
       border="1px solid"
       borderColor="border.100"
-      borderRadius="xl"
-      p={4}
+      borderRadius="12px"
+      p="17px"
     >
-      <Text fontSize="xs" color="gray.200" mb={3} fontWeight="600">{title}</Text>
-      <Flex gap={6} flexWrap="wrap">
+      <Text fontSize="14px" color="gray.100" mb="12px" fontWeight="600">{title}</Text>
+      <Flex gap="24px" flexWrap="wrap">
         {stats.map((s) => (
           <Box key={s.label} minW="120px">
-            <Text fontSize="xs" color="gray.200">{s.label}</Text>
-            <Flex align="baseline" gap={1} mt={1}>
-              <Text fontSize="md" fontWeight="700" fontFamily="ISB" color="text.100">
+            <Text fontSize="13px" color="gray.100">{s.label}</Text>
+            <Flex align="baseline" gap="4px" mt="4px">
+              <Text fontSize="18px" fontWeight="700" fontFamily="ISB" color="text.100">
                 {fmt(s.value)}
               </Text>
-              {s.unit && <Text fontSize="xs" color="gray.200">{s.unit}</Text>}
+              {s.unit && <Text fontSize="12px" color="gray.200">{s.unit}</Text>}
             </Flex>
           </Box>
         ))}

@@ -86,8 +86,8 @@ export default function InvitePromotion() {
     {
       key: 'action', label: '操作',
       render: r => (
-        <HStack gap={2}>
-          <Box as="button" fontSize="xs" color="theme" fontFamily="ISB" cursor="pointer" onClick={() => copyLink(r.linkUrl, r.code)}>
+        <HStack gap="8px">
+          <Box as="button" fontSize="14px" color="theme" fontFamily="ISB" cursor="pointer" onClick={() => copyLink(r.linkUrl, r.code)}>
             {copied === r.code ? '已复制 ✓' : '复制链接'}
           </Box>
         </HStack>
@@ -97,22 +97,22 @@ export default function InvitePromotion() {
 
   const formInput = (label: string, val: string, onChange: (v: string) => void, error?: string, extra?: string, type?: string) => (
     <Box>
-      <Text fontSize="xs" color="gray.100" mb={1}>{label}{extra && <Text as="span" color="gray.200" fontSize="xs"> {extra}</Text>}</Text>
+      <Text fontSize="14px" color="gray.100" mb="6px">{label}{extra && <Text as="span" color="gray.200" fontSize="12px"> {extra}</Text>}</Text>
       <Box as="input" w="100%" h="40px" bg="bg.100" border="1px solid"
-        borderColor={error ? 'red.100' : 'border.100'} borderRadius="md" px={3}
-        fontSize="sm" color="text.200" outline="none" type={type || 'text'}
+        borderColor={error ? 'red.100' : 'border.100'} borderRadius="6px" px={3}
+        fontSize="14px" color="text.100" outline="none" type={type || 'text'}
         value={val} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         _focus={{ borderColor: error ? 'red.100' : 'theme' }} />
-      {error && <Text fontSize="xs" color="red.100" mt={1}>{error}</Text>}
+      {error && <Text fontSize="12px" color="red.100" mt="4px">{error}</Text>}
     </Box>
   )
 
   return (
     <Box>
-      <Flex justify="space-between" align="center" mb={4}>
-        <Text fontFamily="ISB" fontSize="md">邀请链接</Text>
-        <Box as="button" px={4} py={2} bg={isFrozen ? 'bg.300' : 'theme'}
-          color={isFrozen ? 'gray.200' : '#fff'} borderRadius="md" fontSize="sm" fontFamily="ISB"
+      <Flex justify="space-between" align="center" mb="16px">
+        <Text fontFamily="ISB" fontSize="16px">邀请链接</Text>
+        <Box as="button" px="16px" py="8px" bg={isFrozen ? 'bg.300' : 'nav.bg'}
+          color={isFrozen ? 'gray.100' : '#fff'} borderRadius="6px" fontSize="14px" fontFamily="ISB"
           cursor={isFrozen ? 'not-allowed' : 'pointer'} onClick={() => !isFrozen && setShowCreate(true)}
           _hover={isFrozen ? {} : { opacity: 0.85 }} title={isFrozen ? '账号已冻结' : ''}>
           新建邀请码
@@ -126,7 +126,7 @@ export default function InvitePromotion() {
         </FilterItem>
       </FilterBar>
 
-      <Flex gap={3} mb={4} flexWrap="wrap">
+      <Flex gap="12px" mb="16px" flexWrap="wrap">
         <StatCard label="我的永续返佣比例" value={`${currentPerpRate}%`} />
         <StatCard label="我的事件返佣比例" value={`${currentEventRate}%`} />
         <StatCard label="注册人数" value={inviteStats.registrations} unit="人" />
@@ -137,7 +137,7 @@ export default function InvitePromotion() {
       </Flex>
 
       {hasFilter && (
-        <Box mb={4}>
+        <Box mb="16px">
           <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsData} />
         </Box>
       )}
@@ -147,20 +147,21 @@ export default function InvitePromotion() {
       {showCreate && (
         <Box position="fixed" inset={0} bg="rgba(0,0,0,0.3)" zIndex={300} onClick={() => setShowCreate(false)}>
           <Box position="fixed" top="50%" left="50%" transform="translate(-50%,-50%)"
-            bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={6} w="480px"
-            boxShadow="0 8px 32px rgba(0,0,0,0.1)" onClick={e => e.stopPropagation()}>
-            <Text fontFamily="ISB" fontSize="lg" mb={4}>新建邀请码</Text>
-            <Flex direction="column" gap={4}>
+            bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="12px" p="24px" w="480px"
+            boxShadow="0 8px 32px rgba(0,0,0,0.08)" onClick={e => e.stopPropagation()}>
+            <Text fontFamily="ISB" fontSize="18px" mb="16px">新建邀请码</Text>
+            <Flex direction="column" gap="16px">
               {formInput('永续合约返佣比例（%）', perpRate, setPerpRate, errors.perp, `自身: ${currentPerpRate}%`, 'number')}
               {formInput('事件合约返佣比例（%）', eventRate, setEventRate, errors.event, `自身: ${currentEventRate}%`, 'number')}
               {formInput('备注（可选）', cRemark, setCRemark)}
-              <Text fontSize="xs" color="gray.200">如需修改已创建邀请码的返佣比例，请联系平台运营专员。</Text>
+              <Text fontSize="12px" color="gray.100">如需修改已创建邀请码的返佣比例，请联系平台运营专员。</Text>
             </Flex>
-            <Flex justify="flex-end" gap={2} mt={5}>
-              <Box as="button" px={5} py={2} bg="bg.300" color="text.200" border="1px solid" borderColor="border.100"
-                borderRadius="md" fontSize="sm" cursor="pointer" onClick={() => setShowCreate(false)}>取消</Box>
-              <Box as="button" px={5} py={2} bg="theme" color="#fff" borderRadius="md" fontSize="sm"
-                fontFamily="ISB" cursor="pointer" onClick={handleCreate}>创建</Box>
+            <Flex justify="flex-end" gap="8px" mt="20px">
+              <Box as="button" px="20px" py="8px" bg="bg.200" color="text.100" border="1px solid" borderColor="border.100"
+                borderRadius="6px" fontSize="14px" cursor="pointer" onClick={() => setShowCreate(false)}
+                _hover={{ bg: 'bg.100' }}>取消</Box>
+              <Box as="button" px="20px" py="8px" bg="nav.bg" color="#fff" borderRadius="6px" fontSize="14px"
+                fontFamily="ISB" cursor="pointer" onClick={handleCreate} _hover={{ opacity: 0.85 }}>创建</Box>
             </Flex>
           </Box>
         </Box>
@@ -169,33 +170,33 @@ export default function InvitePromotion() {
       {createdCode && (
         <Box position="fixed" inset={0} bg="rgba(0,0,0,0.3)" zIndex={300} onClick={() => setCreatedCode(null)}>
           <Box position="fixed" top="50%" left="50%" transform="translate(-50%,-50%)"
-            bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={6} w="480px"
-            boxShadow="0 8px 32px rgba(0,0,0,0.1)" onClick={e => e.stopPropagation()}>
-            <Flex justify="space-between" align="center" mb={4}>
-              <Text fontFamily="ISB" fontSize="lg" color="theme">邀请码创建成功</Text>
-              <Box as="button" fontSize="lg" color="gray.200" cursor="pointer" onClick={() => setCreatedCode(null)}
+            bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="12px" p="24px" w="480px"
+            boxShadow="0 8px 32px rgba(0,0,0,0.08)" onClick={e => e.stopPropagation()}>
+            <Flex justify="space-between" align="center" mb="16px">
+              <Text fontFamily="ISB" fontSize="18px" color="theme">邀请码创建成功</Text>
+              <Box as="button" fontSize="18px" color="gray.100" cursor="pointer" onClick={() => setCreatedCode(null)}
                 _hover={{ color: 'text.100' }}>✕</Box>
             </Flex>
-            <Flex direction="column" gap={3}>
+            <Flex direction="column" gap="12px">
               <Box>
-                <Text fontSize="xs" color="gray.100">邀请码</Text>
-                <Text fontFamily="ISB" fontSize="xl" color="theme" mt={1}>{createdCode.code}</Text>
+                <Text fontSize="14px" color="gray.100">邀请码</Text>
+                <Text fontFamily="ISB" fontSize="24px" color="theme" mt="4px">{createdCode.code}</Text>
               </Box>
-              <Flex gap={6}>
+              <Flex gap="24px">
                 <Box>
-                  <Text fontSize="xs" color="gray.100">下级永续返佣比例</Text>
-                  <Text fontFamily="ISB" mt={1}>{createdCode.subPerpRate}%</Text>
+                  <Text fontSize="14px" color="gray.100">下级永续返佣比例</Text>
+                  <Text fontFamily="ISB" fontSize="16px" mt="4px">{createdCode.subPerpRate}%</Text>
                 </Box>
                 <Box>
-                  <Text fontSize="xs" color="gray.100">下级事件返佣比例</Text>
-                  <Text fontFamily="ISB" mt={1}>{createdCode.subEventRate}%</Text>
+                  <Text fontSize="14px" color="gray.100">下级事件返佣比例</Text>
+                  <Text fontFamily="ISB" fontSize="16px" mt="4px">{createdCode.subEventRate}%</Text>
                 </Box>
               </Flex>
               <Box>
-                <Text fontSize="xs" color="gray.100">邀请链接</Text>
-                <Flex mt={1} align="center" gap={2}>
-                  <Text fontSize="sm" color="text.200" flex={1} overflow="hidden" textOverflow="ellipsis">{createdCode.linkUrl}</Text>
-                  <Box as="button" px={3} py={1} bg="theme" color="#fff" borderRadius="md" fontSize="xs"
+                <Text fontSize="14px" color="gray.100">邀请链接</Text>
+                <Flex mt="4px" align="center" gap="8px">
+                  <Text fontSize="14px" color="text.100" flex={1} overflow="hidden" textOverflow="ellipsis">{createdCode.linkUrl}</Text>
+                  <Box as="button" px="12px" py="4px" bg="nav.bg" color="#fff" borderRadius="6px" fontSize="12px"
                     fontFamily="ISB" cursor="pointer" onClick={() => copyLink(createdCode.linkUrl, createdCode.code)}
                     _hover={{ opacity: 0.85 }}>
                     {copied === createdCode.code ? '已复制 ✓' : '复制'}
@@ -204,8 +205,8 @@ export default function InvitePromotion() {
               </Box>
               {createdCode.remark && (
                 <Box>
-                  <Text fontSize="xs" color="gray.100">备注</Text>
-                  <Text fontSize="sm" mt={1}>{createdCode.remark}</Text>
+                  <Text fontSize="14px" color="gray.100">备注</Text>
+                  <Text fontSize="14px" mt="4px">{createdCode.remark}</Text>
                 </Box>
               )}
             </Flex>

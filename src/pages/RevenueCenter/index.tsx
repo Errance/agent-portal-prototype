@@ -82,11 +82,10 @@ export default function RevenueCenter() {
   ]
 
   const tabTrigger = (val: string, label: string) => (
-    <Tabs.Trigger value={val} px={4} py={3} fontSize="sm"
-      color={tab === val ? 'text.100' : 'gray.100'}
-      fontFamily={tab === val ? 'ISB' : undefined}
-      borderBottom="2px solid" borderColor={tab === val ? 'theme' : 'transparent'}
-      _hover={{ color: 'text.100' }}>
+    <Tabs.Trigger value={val} px="16px" py="12px" fontSize="14px"
+      color={tab === val ? 'nav.active' : 'nav.inactive'}
+      fontFamily="ISB" bg="transparent" border="none"
+      _hover={{ color: 'nav.active' }}>
       {label}
     </Tabs.Trigger>
   )
@@ -113,29 +112,29 @@ export default function RevenueCenter() {
       </FilterBar>
 
       {preSourceUid && (
-        <Box bg="green.200" border="1px solid" borderColor="theme" px={4} py={2} borderRadius="md" mb={4}>
-          <Text fontSize="sm" color="theme">当前筛选：来源用户 = {preSourceUid}</Text>
+        <Box bg="green.200" border="1px solid" borderColor="theme" px="16px" py="8px" borderRadius="6px" mb="16px">
+          <Text fontSize="14px" color="theme">当前筛选：来源用户 = {preSourceUid}</Text>
         </Box>
       )}
 
-      <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={5} mb={4}>
-        <Text fontSize="xs" color="gray.100" mb={1}>累计返佣（USDT）</Text>
-        <Text fontSize="2xl" fontFamily="ISB" color="text.100">{totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
-        <Text fontSize="xs" color="gray.200" mt={1}>返佣实时到账</Text>
+      <Box border="1px solid" borderColor="border.100" borderRadius="12px" p="20px" mb="16px">
+        <Text fontSize="14px" color="gray.100" mb="4px">累计返佣（USDT）</Text>
+        <Text fontSize="28px" fontFamily="ISB" color="text.100">{totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+        <Text fontSize="12px" color="gray.200" mt="4px">返佣实时到账</Text>
       </Box>
 
-      <Box mb={4}>
+      <Box mb="16px">
         <FilteredStatsPanel title="全局统计" stats={globalStats} />
       </Box>
 
       {hasFilter && (
-        <Box mb={4}>
+        <Box mb="16px">
           <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsData} />
         </Box>
       )}
 
       <Tabs.Root value={tab} onValueChange={e => setTab(e.value)}>
-        <Tabs.List borderBottom="1px solid" borderColor="border.100" mb={4}>
+        <Tabs.List borderBottom="1px solid" borderColor="border.100" mb="16px">
           {tabTrigger('0', '日明细表')}
           {tabTrigger('1', '返佣记录')}
           {tabTrigger('2', '结算方式配置')}
@@ -144,21 +143,21 @@ export default function RevenueCenter() {
         <Tabs.Content value="0">
           <DataTable
             data={dailyRevenue} columns={dailyColumns}
-            footer={<Text fontSize="xs" color="gray.200" mt={2}>佣金包含直推返佣和平台奖励，交易额仅统计直推用户的交易，两者不构成简单的比例关系。</Text>}
+            footer={<Text fontSize="12px" color="gray.100" mt="8px">佣金包含直推返佣和平台奖励，交易额仅统计直推用户的交易，两者不构成简单的比例关系。</Text>}
           />
         </Tabs.Content>
         <Tabs.Content value="1">
           <DataTable data={filteredRecords} columns={recordColumns} />
         </Tabs.Content>
         <Tabs.Content value="2">
-          <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={5}>
-            <Text fontFamily="ISB" mb={4}>当前结算方式配置</Text>
-            <Flex gap={8}>
-              <Box><Text fontSize="xs" color="gray.100">结算方式</Text><Text fontSize="sm" mt={1}>{settlementConfig.method}</Text></Box>
-              <Box><Text fontSize="xs" color="gray.100">结算频率</Text><Text fontSize="sm" mt={1}>{settlementConfig.frequency}</Text></Box>
-              <Box><Text fontSize="xs" color="gray.100">默认结算币种</Text><Text fontSize="sm" mt={1}>{settlementConfig.coin}</Text></Box>
+          <Box border="1px solid" borderColor="border.100" borderRadius="12px" p="20px">
+            <Text fontFamily="ISB" fontSize="16px" mb="16px">当前结算方式配置</Text>
+            <Flex gap="32px">
+              <Box><Text fontSize="14px" color="gray.100">结算方式</Text><Text fontSize="14px" mt="4px">{settlementConfig.method}</Text></Box>
+              <Box><Text fontSize="14px" color="gray.100">结算频率</Text><Text fontSize="14px" mt="4px">{settlementConfig.frequency}</Text></Box>
+              <Box><Text fontSize="14px" color="gray.100">默认结算币种</Text><Text fontSize="14px" mt="4px">{settlementConfig.coin}</Text></Box>
             </Flex>
-            <Text fontSize="xs" color="gray.200" mt={4}>结算方式由管理员在内部后台设定，代理商前台仅展示、不可修改。</Text>
+            <Text fontSize="12px" color="gray.100" mt="16px">结算方式由管理员在内部后台设定，代理商前台仅展示、不可修改。</Text>
           </Box>
         </Tabs.Content>
       </Tabs.Root>

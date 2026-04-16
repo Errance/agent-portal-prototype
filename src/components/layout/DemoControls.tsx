@@ -6,12 +6,12 @@ function Btn({ label, active, onClick }: { label: string; active: boolean; onCli
   return (
     <Box
       as="button"
-      px={2}
-      py={1}
-      fontSize="xs"
-      borderRadius="md"
+      px="8px"
+      py="4px"
+      fontSize="12px"
+      borderRadius="4px"
       fontFamily="ISB"
-      bg={active ? 'theme' : 'bg.300'}
+      bg={active ? 'theme' : 'bg.100'}
       color={active ? '#fff' : 'gray.100'}
       border="1px solid"
       borderColor={active ? 'theme' : 'border.100'}
@@ -35,23 +35,23 @@ export default function DemoControls() {
   return (
     <Box
       position="fixed"
-      bottom={4}
-      right={4}
+      bottom="16px"
+      right="16px"
       bg="bg.200"
       border="1px solid"
       borderColor="border.100"
-      borderRadius="xl"
-      p={3}
+      borderRadius="12px"
+      p="12px"
       zIndex={200}
       maxW="320px"
       boxShadow="0 4px 16px rgba(0,0,0,0.08)"
     >
-      <Text fontSize="xs" color="theme" fontWeight="600" fontFamily="ISB" mb={2}>Demo 控制面板</Text>
+      <Text fontSize="12px" color="theme" fontWeight="600" fontFamily="ISB" mb="8px">Demo 控制面板</Text>
 
-      <Flex direction="column" gap={2}>
+      <Flex direction="column" gap="8px">
         <Box>
-          <Text fontSize="xs" color="gray.100" mb={1}>账号状态</Text>
-          <HStack gap={1}>
+          <Text fontSize="12px" color="gray.100" mb="4px">账号状态</Text>
+          <HStack gap="4px">
             {(['normal', 'frozen', 'not_agent'] as AgentStatus[]).map(s => (
               <Btn key={s} label={s} active={status === s} onClick={() => setStatus(s)} />
             ))}
@@ -59,15 +59,15 @@ export default function DemoControls() {
         </Box>
 
         <Box>
-          <Text fontSize="xs" color="gray.100" mb={1}>交易可见深度</Text>
-          <HStack gap={1}>
+          <Text fontSize="12px" color="gray.100" mb="4px">交易可见深度</Text>
+          <HStack gap="4px">
             {(['full', 'summary', 'hidden'] as TradeVisibility[]).map(v => (
               <Btn key={v} label={v} active={tradeVisibility === v} onClick={() => setTradeVisibility(v)} />
             ))}
           </HStack>
         </Box>
 
-        <HStack gap={2}>
+        <HStack gap="8px">
           <Btn
             label={`自推自算: ${selfRebateEnabled ? 'ON' : 'OFF'}`}
             active={selfRebateEnabled}

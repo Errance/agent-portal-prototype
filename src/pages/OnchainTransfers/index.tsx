@@ -1,12 +1,11 @@
 import { useState, useMemo } from 'react'
-import { Box } from '@chakra-ui/react'
+import { Box, Text } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
 import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
 import { FilterBar, Select, Input, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
 import { transferRecords } from '@/mock/data'
 import type { TransferRecord } from '@/mock/types'
-import { Text } from '@chakra-ui/react'
 
 export default function OnchainTransfers() {
   const [uid, setUid] = useState('')
@@ -59,7 +58,7 @@ export default function OnchainTransfers() {
     { key: 'sub', label: '子代理名称/UID', render: r => r.subAgentUid ?? '—' },
     { key: 'remark', label: '备注', render: r => r.remark || '—' },
     { key: 'channel', label: '渠道名称', render: r => r.channel },
-    { key: 'tid', label: '充提 ID', render: r => <Text fontSize="xs" maxW="120px" overflow="hidden" textOverflow="ellipsis">{r.transferId}</Text> },
+    { key: 'tid', label: '充提 ID', render: r => <Text fontSize="12px" maxW="120px" overflow="hidden" textOverflow="ellipsis">{r.transferId}</Text> },
     { key: 'type', label: '充提类型', render: r => r.type === 'deposit' ? '充值' : '提现' },
     { key: 'subType', label: '充提子类型', render: r => r.subType === 'normal' ? '普通' : '内部转账' },
     { key: 'amt', label: '数量（USDT）', render: r => r.amount.toFixed(2), sortable: true, sortKey: r => r.amount },
@@ -96,12 +95,12 @@ export default function OnchainTransfers() {
         <FilterItem label="备注"><Input value={remark} onChange={setRemark} placeholder="模糊搜索" /></FilterItem>
       </FilterBar>
 
-      <Box mb={4}>
+      <Box mb="16px">
         <FilteredStatsPanel title="全局统计" stats={globalStats} />
       </Box>
 
       {hasFilter && (
-        <Box mb={4}>
+        <Box mb="16px">
           <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsData} />
         </Box>
       )}

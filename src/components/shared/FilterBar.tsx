@@ -10,7 +10,7 @@ interface FilterItemProps {
 export function FilterItem({ label, children, required }: FilterItemProps) {
   return (
     <Box minW="180px" flex={1}>
-      <Text fontSize="xs" color="gray.100" mb={1}>
+      <Text fontSize="14px" color="gray.100" mb="6px" lineHeight="20px">
         {required && <Text as="span" color="red.100">* </Text>}
         {label}
       </Text>
@@ -34,14 +34,14 @@ export function Select({
       onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
       disabled={disabled}
       w="100%"
-      h="32px"
+      h="40px"
       bg="bg.200"
       border="1px solid"
       borderColor="border.100"
-      borderRadius="md"
+      borderRadius="6px"
       px={3}
-      fontSize="sm"
-      color={disabled ? 'gray.200' : 'text.200'}
+      fontSize="14px"
+      color={disabled ? 'gray.200' : 'text.100'}
       outline="none"
       cursor={disabled ? 'not-allowed' : 'pointer'}
       opacity={disabled ? 0.5 : 1}
@@ -72,17 +72,17 @@ export function Input({
       onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
       placeholder={placeholder}
       w="100%"
-      h="32px"
+      h="40px"
       bg="bg.200"
       border="1px solid"
       borderColor="border.100"
-      borderRadius="md"
+      borderRadius="6px"
       px={3}
-      fontSize="sm"
-      color="text.200"
+      fontSize="14px"
+      color="text.100"
       outline="none"
       _focus={{ borderColor: 'theme' }}
-      _placeholder={{ color: 'gray.200' }}
+      _placeholder={{ color: 'gray.100' }}
     />
   )
 }
@@ -93,26 +93,19 @@ export function FilterBar({ children, onSearch, onReset }: {
   onReset?: () => void
 }) {
   return (
-    <Box
-      bg="bg.200"
-      border="1px solid"
-      borderColor="border.100"
-      borderRadius="xl"
-      p={5}
-      mb={4}
-    >
+    <Box mb={4}>
       <Flex gap={4} flexWrap="wrap" align="flex-end">
         {children}
-        <Flex gap={2} mt="auto" pb={0}>
+        <Flex gap="8px" mt="auto" pb={0}>
           {onSearch && (
             <Box
               as="button"
-              px={4}
-              h="32px"
-              bg="theme"
+              px="16px"
+              h="40px"
+              bg="nav.bg"
               color="#fff"
-              borderRadius="md"
-              fontSize="sm"
+              borderRadius="6px"
+              fontSize="14px"
               fontFamily="ISB"
               cursor="pointer"
               _hover={{ opacity: 0.85 }}
@@ -124,16 +117,16 @@ export function FilterBar({ children, onSearch, onReset }: {
           {onReset && (
             <Box
               as="button"
-              px={4}
-              h="32px"
-              bg="bg.300"
-              color="text.200"
+              px="16px"
+              h="40px"
+              bg="bg.200"
+              color="text.100"
               border="1px solid"
               borderColor="border.100"
-              borderRadius="md"
-              fontSize="sm"
+              borderRadius="6px"
+              fontSize="14px"
               cursor="pointer"
-              _hover={{ bg: 'bg.400' }}
+              _hover={{ bg: 'bg.100' }}
               onClick={onReset}
             >
               重置
@@ -155,7 +148,7 @@ export function DateRangeInput({
   return (
     <Flex gap={2} align="center">
       <Input type="date" value={from} onChange={onFromChange} />
-      <Text fontSize="xs" color="gray.200">至</Text>
+      <Text fontSize="14px" color="gray.200">至</Text>
       <Input type="date" value={to} onChange={onToChange} />
     </Flex>
   )

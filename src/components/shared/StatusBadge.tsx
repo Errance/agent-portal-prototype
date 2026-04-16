@@ -14,12 +14,12 @@ const transferMap: Record<TransferStatus, { label: string; color: string; bg: st
 
 const depositMap: Record<DepositStatus, { label: string; color: string; bg: string }> = {
   deposited: { label: '已充值', color: '#0ABAB5', bg: 'rgba(10,186,181,0.1)' },
-  not_deposited: { label: '未充值', color: '#777E90', bg: 'rgba(119,126,144,0.1)' },
+  not_deposited: { label: '未充值', color: '#8E8E92', bg: 'rgba(142,142,146,0.1)' },
 }
 
 const tradeMap: Record<TradeStatus, { label: string; color: string; bg: string }> = {
   traded: { label: '已交易', color: '#0ABAB5', bg: 'rgba(10,186,181,0.1)' },
-  not_traded: { label: '未交易', color: '#777E90', bg: 'rgba(119,126,144,0.1)' },
+  not_traded: { label: '未交易', color: '#8E8E92', bg: 'rgba(142,142,146,0.1)' },
 }
 
 const eventResultMap: Record<EventResult, { label: string; color: string; bg: string }> = {
@@ -46,10 +46,10 @@ export default function StatusBadge({ type, value }: { type: BadgeType; value: s
   return (
     <Box
       as="span"
-      px={2}
-      py={0.5}
-      borderRadius="md"
-      fontSize="xs"
+      px="8px"
+      py="2px"
+      borderRadius="4px"
+      fontSize="12px"
       fontFamily="ISB"
       color={info.color}
       bg={info.bg}

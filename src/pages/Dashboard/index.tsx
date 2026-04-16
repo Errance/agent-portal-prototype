@@ -24,25 +24,25 @@ export default function Dashboard() {
   return (
     <Box>
       <Flex
-        align="center" justify="space-between" mb={4}
-        bg="bg.200" border="1px solid" borderColor="border.100"
-        borderRadius="xl" px={5} py={4}
+        align="center" justify="space-between" mb="16px"
+        border="1px solid" borderColor="border.100"
+        borderRadius="12px" px="20px" py="16px"
       >
-        <Text fontSize="xl" fontFamily="ISB" color="text.100">
+        <Text fontSize="20px" fontFamily="ISB" color="text.100">
           您好，{agentName}
         </Text>
         <Box
-          px={3} py={1}
+          px="12px" py="4px"
           bg="rgba(10,186,181,0.1)"
           border="1px solid" borderColor="theme"
           borderRadius="full"
-          fontSize="xs" fontFamily="ISB" color="theme"
+          fontSize="12px" fontFamily="ISB" color="theme"
         >
           Lv.{agentLevel} {LEVEL_NAMES[agentLevel]}
         </Box>
       </Flex>
 
-      <Text fontSize="xs" color="gray.200" mb={4}>
+      <Text fontSize="13px" color="gray.100" mb="16px">
         数据统计范围以 UTC+8 时区为准
       </Text>
 
@@ -51,21 +51,21 @@ export default function Dashboard() {
           bg="green.200"
           border="1px solid"
           borderColor="theme"
-          borderRadius="xl"
-          p={5}
-          mb={6}
+          borderRadius="12px"
+          p="20px"
+          mb="24px"
         >
-          <Text fontFamily="ISB" color="text.100" mb={2}>欢迎成为 TurboFlow 代理商！</Text>
-          <Text fontSize="sm" color="gray.100" mb={3}>
+          <Text fontFamily="ISB" fontSize="15px" color="text.100" mb="8px">欢迎成为 TurboFlow 代理商！</Text>
+          <Text fontSize="14px" color="gray.100" mb="12px">
             创建您的第一个邀请码，开始发展下级用户并获取返佣收益。
           </Text>
-          <HStack gap={3}>
+          <HStack gap="12px">
             <Link to="/invite">
               <Box
                 as="button"
-                px={4} py={2}
-                bg="theme" color="#fff"
-                borderRadius="md" fontSize="sm" fontFamily="ISB"
+                px="16px" py="8px"
+                bg="nav.bg" color="#fff"
+                borderRadius="6px" fontSize="14px" fontFamily="ISB"
                 cursor="pointer" _hover={{ opacity: 0.85 }}
               >
                 创建邀请码
@@ -73,12 +73,12 @@ export default function Dashboard() {
             </Link>
             <Box
               as="button"
-              px={4} py={2}
-              bg="bg.300" color="text.200"
+              px="16px" py="8px"
+              bg="bg.200" color="text.100"
               border="1px solid" borderColor="border.100"
-              borderRadius="md" fontSize="sm"
+              borderRadius="6px" fontSize="14px"
               cursor="pointer" onClick={() => setIsNewAgent(false)}
-              _hover={{ bg: 'bg.400' }}
+              _hover={{ bg: 'bg.100' }}
             >
               我知道了
             </Box>
@@ -86,7 +86,7 @@ export default function Dashboard() {
         </Box>
       )}
 
-      <Flex gap={4} mb={6} flexWrap="wrap">
+      <Flex gap="16px" mb="24px" flexWrap="wrap">
         {dashboardKPI.map(kpi => (
           <StatCard
             key={kpi.label}
@@ -99,20 +99,19 @@ export default function Dashboard() {
       </Flex>
 
       <Box
-        bg="bg.200"
         border="1px solid"
         borderColor="border.100"
-        borderRadius="xl"
-        p={5}
+        borderRadius="12px"
+        p="20px"
       >
-        <Flex justify="space-between" align="center" mb={4}>
-          <Text fontFamily="ISB" fontSize="md" color="text.100">邀请链接</Text>
+        <Flex justify="space-between" align="center" mb="16px">
+          <Text fontFamily="ISB" fontSize="16px" color="text.100">邀请链接</Text>
           <Link to="/invite">
             <Box
               as="button"
-              px={4} py={2}
-              bg="theme" color="#fff"
-              borderRadius="md" fontSize="sm" fontFamily="ISB"
+              px="16px" py="8px"
+              bg="nav.bg" color="#fff"
+              borderRadius="6px" fontSize="14px" fontFamily="ISB"
               cursor="pointer" _hover={{ opacity: 0.85 }}
             >
               管理推广码

@@ -105,50 +105,56 @@ export default function TradingCenter() {
   [tab, filteredPerpPos, filteredPerpHist, filteredEvent])
 
   const tabTrigger = (val: string, label: string) => (
-    <Tabs.Trigger value={val} px={4} py={3} fontSize="sm"
-      color={tab === val ? 'text.100' : 'gray.100'}
-      fontFamily={tab === val ? 'ISB' : undefined}
-      borderBottom="2px solid" borderColor={tab === val ? 'theme' : 'transparent'}
-      _hover={{ color: 'text.100' }}>
+    <Tabs.Trigger value={val} px="16px" py="12px" fontSize="14px"
+      color={tab === val ? 'nav.active' : 'nav.inactive'}
+      fontFamily="ISB" bg="transparent" border="none"
+      _hover={{ color: 'nav.active' }}>
       {label}
     </Tabs.Trigger>
   )
 
   const summaryView = (
-    <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={5}>
-      <Text fontFamily="ISB" mb={3}>汇总数据</Text>
-      <Flex gap={8}>
-        <Box><Text fontSize="xs" color="gray.100">交易笔数</Text><Text fontSize="xl" fontFamily="ISB">{perpPositions.length + perpHistory.length + eventHistory.length}</Text></Box>
-        <Box><Text fontSize="xs" color="gray.100">总交易额（USDT）</Text><Text fontSize="xl" fontFamily="ISB">{(perpHistory.reduce((s, r) => s + r.price * r.quantity, 0) + eventHistory.reduce((s, r) => s + r.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text></Box>
+    <Box border="1px solid" borderColor="border.100" borderRadius="12px" p="20px">
+      <Text fontFamily="ISB" fontSize="16px" mb="12px">汇总数据</Text>
+      <Flex gap="32px">
+        <Box>
+          <Text fontSize="14px" color="gray.100">交易笔数</Text>
+          <Text fontSize="24px" fontFamily="ISB">{perpPositions.length + perpHistory.length + eventHistory.length}</Text>
+        </Box>
+        <Box>
+          <Text fontSize="14px" color="gray.100">总交易额（USDT）</Text>
+          <Text fontSize="24px" fontFamily="ISB">{(perpHistory.reduce((s, r) => s + r.price * r.quantity, 0) + eventHistory.reduce((s, r) => s + r.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+        </Box>
       </Flex>
-      <Text fontSize="xs" color="gray.200" mt={4}>当前数据可见深度为"汇总"，具体持仓和盈亏不可见。</Text>
+      <Text fontSize="12px" color="gray.100" mt="16px">当前数据可见深度为"汇总"，具体持仓和盈亏不可见。</Text>
     </Box>
   )
 
   return (
     <Box>
-      <Flex justify="space-between" align="center" mb={4}>
-        <Text fontFamily="ISB" fontSize="md">交易中心</Text>
+      <Flex justify="space-between" align="center" mb="16px">
+        <Text fontFamily="ISB" fontSize="16px">交易中心</Text>
         {!isSummary && (
           <Box position="relative">
-            <Box as="button" px={3} py={1.5} bg="bg.300" border="1px solid" borderColor="border.100"
-              borderRadius="md" fontSize="xs" color="text.200" cursor="pointer"
-              onClick={() => setShowColPicker(!showColPicker)}>自定义列</Box>
+            <Box as="button" px="12px" py="6px" bg="bg.200" border="1px solid" borderColor="border.100"
+              borderRadius="6px" fontSize="14px" color="text.100" cursor="pointer"
+              onClick={() => setShowColPicker(!showColPicker)}
+              _hover={{ bg: 'bg.100' }}>自定义列</Box>
             {showColPicker && (
-              <Box position="absolute" right={0} top="100%" mt={1} bg="bg.200" border="1px solid"
-                borderColor="border.100" borderRadius="md" p={3} zIndex={50} minW="180px"
+              <Box position="absolute" right={0} top="100%" mt="4px" bg="bg.200" border="1px solid"
+                borderColor="border.100" borderRadius="12px" p="12px" zIndex={50} minW="180px"
                 boxShadow="0 4px 16px rgba(0,0,0,0.08)">
                 {currentCols.map(col => (
-                  <Flex key={col.key} align="center" gap={2} py={1} cursor="pointer"
+                  <Flex key={col.key} align="center" gap="8px" py="4px" cursor="pointer"
                     onClick={() => setHiddenCols(prev => {
                       const next = new Set(prev)
                       next.has(col.key) ? next.delete(col.key) : next.add(col.key)
                       return next
                     })}>
-                    <Box w={4} h={4} borderRadius="sm" border="1px solid"
+                    <Box w="16px" h="16px" borderRadius="4px" border="1px solid"
                       borderColor={hiddenCols.has(col.key) ? 'border.100' : 'theme'}
                       bg={hiddenCols.has(col.key) ? 'transparent' : 'theme'} />
-                    <Text fontSize="xs" color="text.200">{typeof col.label === 'string' ? col.label : col.key}</Text>
+                    <Text fontSize="14px" color="text.100">{typeof col.label === 'string' ? col.label : col.key}</Text>
                   </Flex>
                 ))}
               </Box>
@@ -160,7 +166,7 @@ export default function TradingCenter() {
       {isSummary ? summaryView : (
         <>
           <Tabs.Root value={tab} onValueChange={e => { setTab(e.value); setHiddenCols(new Set()) }}>
-            <Tabs.List borderBottom="1px solid" borderColor="border.100" mb={4}>
+            <Tabs.List borderBottom="1px solid" borderColor="border.100" mb="16px">
               {tabTrigger('0', '永续合约当前持仓')}
               {tabTrigger('1', '永续合约历史委托')}
               {tabTrigger('2', '事件合约历史委托')}
@@ -193,12 +199,12 @@ export default function TradingCenter() {
               )}
             </FilterBar>
 
-            <Box mb={4}>
+            <Box mb="16px">
               <FilteredStatsPanel title="全局统计" stats={globalStatsForTab} />
             </Box>
 
             {hasFilter && (
-              <Box mb={4}>
+              <Box mb="16px">
                 <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsForTab} />
               </Box>
             )}

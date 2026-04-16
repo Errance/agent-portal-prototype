@@ -53,26 +53,22 @@ export default function DataTable<T>({
 
   return (
     <Box>
-      <Box
-        overflowX="auto"
-        maxH={maxH}
-        borderRadius="md"
-      >
+      <Box overflowX="auto" maxH={maxH}>
         <Table.Root size="sm" variant="line" stickyHeader>
           <Table.Header>
             <Table.Row>
               {columns.map((col, ci) => (
                 <Table.ColumnHeader
                   key={col.key}
-                  bg="bg.200"
+                  bg="transparent"
                   border={0}
                   borderBottom="1px solid"
                   borderColor="border.100"
                   color="gray.100"
-                  fontSize="xs"
+                  fontSize="14px"
                   fontWeight="500"
-                  py={2.5}
-                  px={2.5}
+                  py="12px"
+                  px="12px"
                   whiteSpace="nowrap"
                   minW={col.minW}
                   w={col.width}
@@ -81,13 +77,14 @@ export default function DataTable<T>({
                   _hover={col.sortable ? { color: 'text.100' } : {}}
                   {...(stickyRight && ci === columns.length - 1 ? {
                     position: 'sticky' as const, right: 0, zIndex: 2,
+                    bg: '#F4F5F7',
                     boxShadow: '-4px 0 8px rgba(0,0,0,0.04)',
                   } : {})}
                 >
                   <Flex align="center" gap={1}>
                     {col.label}
                     {col.sortable && sortKey === col.key && (
-                      <Text fontSize="xs">{sortAsc ? '↑' : '↓'}</Text>
+                      <Text fontSize="12px">{sortAsc ? '↑' : '↓'}</Text>
                     )}
                   </Flex>
                 </Table.ColumnHeader>
@@ -96,19 +93,25 @@ export default function DataTable<T>({
           </Table.Header>
           <Table.Body>
             {sliced.map((row, ri) => (
-              <Table.Row key={ri} bg={ri % 2 === 0 ? 'transparent' : 'bg.300'} _hover={{ bg: 'bg.400' }}>
+              <Table.Row
+                key={ri}
+                bg="transparent"
+                _hover={{ bg: 'bg.300' }}
+              >
                 {columns.map((col, ci) => (
                   <Table.Cell
                     key={col.key}
                     border={0}
-                    px={2.5}
-                    py={3}
-                    fontSize="sm"
-                    color="text.200"
+                    borderBottom="1px solid"
+                    borderColor="border.100"
+                    px="12px"
+                    py="12px"
+                    fontSize="14px"
+                    color="text.100"
                     whiteSpace="nowrap"
                     {...(stickyRight && ci === columns.length - 1 ? {
                       position: 'sticky' as const, right: 0,
-                      bg: ri % 2 === 0 ? 'bg.200' : 'bg.300',
+                      bg: 'bg.200',
                       boxShadow: '-4px 0 8px rgba(0,0,0,0.04)',
                     } : {})}
                   >
@@ -124,41 +127,44 @@ export default function DataTable<T>({
       {footer && <Box mt={2} px={2}>{footer}</Box>}
 
       {sorted.length > pageSize && (
-        <Flex justify="flex-end" align="center" mt={3} gap={2}>
-          <Text fontSize="xs" color="gray.100">共 {sorted.length} 条</Text>
-          <HStack gap={1}>
+        <Flex justify="flex-end" align="center" mt="16px" gap="12px">
+          <Text fontSize="14px" color="gray.100">
+            {safeP}
+          </Text>
+          <HStack gap="4px">
             <PageBtn label="‹" disabled={safeP <= 1} onClick={() => setPage(safeP - 1)} />
-            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => i + 1).map(p => (
-              <PageBtn key={p} label={String(p)} active={p === safeP} onClick={() => setPage(p)} />
-            ))}
-            {totalPages > 7 && <Text fontSize="xs" color="gray.200">...</Text>}
             <PageBtn label="›" disabled={safeP >= totalPages} onClick={() => setPage(safeP + 1)} />
           </HStack>
-          <Text fontSize="xs" color="gray.100">{pageSize} 条/页</Text>
+          <Text fontSize="14px" color="gray.100">
+            {(safeP - 1) * pageSize + 1}–{Math.min(safeP * pageSize, sorted.length)} · 共 {sorted.length} 条
+          </Text>
         </Flex>
       )}
     </Box>
   )
 }
 
-function PageBtn({ label, active, disabled, onClick }: {
-  label: string; active?: boolean; disabled?: boolean; onClick: () => void
+function PageBtn({ label, disabled, onClick }: {
+  label: string; disabled?: boolean; onClick: () => void
 }) {
   return (
     <Box
       as="button"
-      px={2} py={1}
-      fontSize="xs"
-      borderRadius="md"
-      fontFamily="ISB"
-      bg={active ? 'theme' : 'bg.200'}
-      color={active ? '#fff' : disabled ? 'gray.200' : 'text.200'}
+      w="28px"
+      h="28px"
+      display="flex"
+      alignItems="center"
+      justifyContent="center"
+      fontSize="14px"
+      borderRadius="6px"
+      bg="bg.200"
+      color={disabled ? 'gray.100' : 'text.100'}
       border="1px solid"
-      borderColor={active ? 'theme' : 'border.100'}
+      borderColor="border.100"
       opacity={disabled ? 0.4 : 1}
       cursor={disabled ? 'not-allowed' : 'pointer'}
       onClick={disabled ? undefined : onClick}
-      _hover={disabled ? {} : { bg: active ? 'theme' : 'bg.300' }}
+      _hover={disabled ? {} : { bg: 'bg.100' }}
     >
       {label}
     </Box>
