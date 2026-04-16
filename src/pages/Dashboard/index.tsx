@@ -5,6 +5,11 @@ import DataTable, { type Column } from '@/components/shared/DataTable'
 import { useAgent } from '@/context/AgentContext'
 import { dashboardKPI, inviteCodeSummary } from '@/mock/data'
 import type { InviteCodeSummary } from '@/mock/types'
+import type { AgentLevel } from '@/mock/types'
+
+const LEVEL_NAMES: Record<AgentLevel, string> = {
+  1: '青铜', 2: '白银', 3: '黄金', 4: '钻石', 5: '星耀',
+}
 
 const columns: Column<InviteCodeSummary>[] = [
   { key: 'code', label: '邀请码', render: r => <Text color="theme" fontFamily="ISB">{r.code}</Text> },
@@ -14,10 +19,29 @@ const columns: Column<InviteCodeSummary>[] = [
 ]
 
 export default function Dashboard() {
-  const { isNewAgent, setIsNewAgent } = useAgent()
+  const { isNewAgent, setIsNewAgent, agentName, agentLevel } = useAgent()
 
   return (
     <Box>
+      <Flex
+        align="center" justify="space-between" mb={4}
+        bg="bg.200" border="1px solid" borderColor="border.100"
+        borderRadius={{ base: '0', md: 'xl' }} px={5} py={4}
+      >
+        <Text fontSize="xl" fontFamily="ISB" color="text.100">
+          您好，{agentName}
+        </Text>
+        <Box
+          px={3} py={1}
+          bg="rgba(10,186,181,0.1)"
+          border="1px solid" borderColor="theme"
+          borderRadius="full"
+          fontSize="xs" fontFamily="ISB" color="theme"
+        >
+          Lv.{agentLevel} {LEVEL_NAMES[agentLevel]}
+        </Box>
+      </Flex>
+
       <Text fontSize="xs" color="gray.200" mb={4}>
         数据统计范围以 UTC+8 时区为准
       </Text>

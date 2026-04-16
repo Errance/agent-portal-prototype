@@ -1,4 +1,5 @@
 export type AgentStatus = 'normal' | 'frozen' | 'not_agent'
+export type AgentLevel = 1 | 2 | 3 | 4 | 5
 export type TradeVisibility = 'full' | 'summary' | 'hidden'
 export type ProductLine = 'all' | 'perpetual' | 'event'
 export type SettlementType = 'all' | 'flat_fee' | 'profit_share'

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { AgentStatus, TradeVisibility } from '@/mock/types'
+import type { AgentStatus, AgentLevel, TradeVisibility } from '@/mock/types'
 import { agentConfig } from '@/mock/data'
 
 export function useAgentStatus() {
@@ -19,5 +19,7 @@ export function useAgentStatus() {
     isFrozen, isAgent,
     currentPerpRate: agentConfig.currentPerpRate,
     currentEventRate: agentConfig.currentEventRate,
+    agentName: agentConfig.agentName,
+    agentLevel: agentConfig.agentLevel as AgentLevel,
   }
 }

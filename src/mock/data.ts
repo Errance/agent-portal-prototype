@@ -1,5 +1,5 @@
 import type {
-  AgentStatus, TradeVisibility, DashboardKPI, InviteCodeSummary,
+  AgentStatus, AgentLevel, TradeVisibility, DashboardKPI, InviteCodeSummary,
   Invitee, SubAgent, DailyRevenue, CommissionRecord,
   PerpPosition, PerpOrder, EventOrder, InviteCode, TransferRecord,
   SettlementConfig, InviteStats,
@@ -13,6 +13,8 @@ export const agentConfig = {
   isNewAgent: false,
   currentPerpRate: 1.5,
   currentEventRate: 1.2,
+  agentName: '王大拿BG',
+  agentLevel: 3 as AgentLevel,
 }
 
 // ─── Helpers ───
