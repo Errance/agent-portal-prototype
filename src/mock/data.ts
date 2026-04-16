@@ -32,6 +32,7 @@ export const dashboardKPI: DashboardKPI[] = [
   { label: '今日净充值（USDT）', value: 45280.50, unit: 'USDT', changePercent: -8.3 },
   { label: '今日 Flat Fee（USDT）', value: 1256.80, unit: 'USDT', changePercent: 12.5 },
   { label: '今日 Profit Share 有效交易量（USDT）', value: 892340.00, unit: 'USDT', changePercent: 5.2 },
+  { label: '今日事件合约交易量（USDT）', value: 156720.00, unit: 'USDT', changePercent: 9.8 },
   { label: '今日佣金（USDT）', value: 3842.65, unit: 'USDT', changePercent: 22.1 },
 ]
 
@@ -88,10 +89,17 @@ export const dailyRevenue: DailyRevenue[] = Array.from({ length: 30 }, (_, i) =>
   const ff = rand(50, 800)
   const ps = rand(30, 500)
   const ev = rand(20, 400)
+  const ffVol = rand(30000, 300000)
+  const psVol = rand(20000, 200000)
+  const evVol = rand(10000, 150000)
+  const ffFee = rand(10, 200)
   return {
     date: dateOnly(i),
     commission: +(ff + ps + ev).toFixed(2),
-    tradeVolume: rand(50000, 500000),
+    ffTradeVolume: ffVol,
+    psTradeVolume: psVol,
+    eventTradeVolume: evVol,
+    flatFeeFee: ffFee,
     perpCommission: +(ff + ps).toFixed(2),
     flatFeeCommission: ff,
     profitShareCommission: ps,

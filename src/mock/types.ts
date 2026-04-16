@@ -58,7 +58,10 @@ export interface SubAgent {
 export interface DailyRevenue {
   date: string
   commission: number
-  tradeVolume: number
+  ffTradeVolume: number
+  psTradeVolume: number
+  eventTradeVolume: number
+  flatFeeFee: number
   perpCommission: number
   flatFeeCommission: number
   profitShareCommission: number

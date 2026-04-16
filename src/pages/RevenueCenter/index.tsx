@@ -61,7 +61,10 @@ export default function RevenueCenter() {
   const dailyColumns: Column<DailyRevenue>[] = [
     { key: 'date', label: '日期', render: r => r.date },
     { key: 'commission', label: '佣金（USDT）', render: r => r.commission.toFixed(2), sortable: true, sortKey: r => r.commission },
-    { key: 'volume', label: '交易额（USDT）', render: r => r.tradeVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }), sortable: true, sortKey: r => r.tradeVolume },
+    { key: 'ffVol', label: 'FF 有效交易量', render: r => r.ffTradeVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }), sortable: true, sortKey: r => r.ffTradeVolume },
+    { key: 'psVol', label: 'PS 有效交易量', render: r => r.psTradeVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }), sortable: true, sortKey: r => r.psTradeVolume },
+    { key: 'evVol', label: '事件有效交易量', render: r => r.eventTradeVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }), sortable: true, sortKey: r => r.eventTradeVolume },
+    { key: 'ffFee', label: 'FF 手续费', render: r => r.flatFeeFee.toFixed(2), sortable: true, sortKey: r => r.flatFeeFee },
     { key: 'perp', label: '永续合约返佣', render: r => r.perpCommission.toFixed(2) },
     { key: 'ff', label: 'Flat Fee 返佣', render: r => r.flatFeeCommission.toFixed(2) },
     { key: 'ps', label: 'Profit Share 返佣', render: r => r.profitShareCommission.toFixed(2) },
