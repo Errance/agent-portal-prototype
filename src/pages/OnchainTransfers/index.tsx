@@ -1,10 +1,12 @@
 import { useState, useMemo } from 'react'
-import { Box, Flex, Text } from '@chakra-ui/react'
+import { Box } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
+import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
 import { FilterBar, Select, Input, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
 import { transferRecords } from '@/mock/data'
 import type { TransferRecord } from '@/mock/types'
+import { Text } from '@chakra-ui/react'
 
 export default function OnchainTransfers() {
   const [uid, setUid] = useState('')
@@ -15,8 +17,8 @@ export default function OnchainTransfers() {
   const [dateTo, setDateTo] = useState('')
   const [userLevel, setUserLevel] = useState('all')
   const [remark, setRemark] = useState('')
-  const [expandDeposit, setExpandDeposit] = useState(false)
-  const [expandWithdraw, setExpandWithdraw] = useState(false)
+
+  const hasFilter = uid !== '' || transferId !== '' || type !== 'all' || subType !== 'all' || userLevel !== 'all' || remark !== '' || dateFrom !== '' || dateTo !== ''
 
   const filtered = useMemo(() => {
     let data = transferRecords
@@ -29,8 +31,27 @@ export default function OnchainTransfers() {
     return data
   }, [uid, transferId, type, subType, userLevel, remark])
 
-  const totalDeposit = filtered.filter(r => r.type === 'deposit' && r.status === 'success').reduce((s, r) => s + r.amount, 0)
-  const totalWithdraw = filtered.filter(r => r.type === 'withdrawal' && r.status === 'success').reduce((s, r) => s + r.amount, 0)
+  const globalStats = useMemo(() => {
+    const depRecs = transferRecords.filter(r => r.type === 'deposit' && r.status === 'success')
+    const withRecs = transferRecords.filter(r => r.type === 'withdrawal' && r.status === 'success')
+    return [
+      { label: '总充值笔数', value: depRecs.length },
+      { label: '总充值金额', value: depRecs.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+      { label: '总提现笔数', value: withRecs.length },
+      { label: '总提现金额', value: withRecs.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+    ]
+  }, [])
+
+  const filteredStatsData = useMemo(() => {
+    const depRecs = filtered.filter(r => r.type === 'deposit' && r.status === 'success')
+    const withRecs = filtered.filter(r => r.type === 'withdrawal' && r.status === 'success')
+    return [
+      { label: '充值笔数', value: depRecs.length },
+      { label: '充值金额', value: depRecs.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+      { label: '提现笔数', value: withRecs.length },
+      { label: '提现金额', value: withRecs.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+    ]
+  }, [filtered])
 
   const columns: Column<TransferRecord>[] = [
     { key: 'uid', label: '用户 UID', render: r => r.uid },
@@ -45,23 +66,6 @@ export default function OnchainTransfers() {
     { key: 'status', label: '状态', render: r => <StatusBadge type="transfer" value={r.status} /> },
     { key: 'time', label: '时间', render: r => r.time },
   ]
-
-  const collapsibleSection = (label: string, amount: number, expanded: boolean, toggle: () => void, filterType: string) => (
-    <Box
-      bg="bg.200" border="1px solid" borderColor="border.100" borderRadius={{ base: '0', md: 'lg' }} px={5} py={3}
-      cursor="pointer" onClick={toggle}
-    >
-      <Flex justify="space-between" align="center">
-        <Text fontSize="sm" color="text.200">{label}: <Text as="span" fontFamily="ISB" color="text.100">{amount.toFixed(2)} USDT</Text></Text>
-        <Text fontSize="xs" color="gray.200">{expanded ? '收起 ▲' : '展开 ▼'}</Text>
-      </Flex>
-      {expanded && (
-        <Box mt={3} onClick={e => e.stopPropagation()}>
-          <DataTable data={filtered.filter(r => r.type === filterType)} columns={columns} pageSize={5} />
-        </Box>
-      )}
-    </Box>
-  )
 
   return (
     <Box>
@@ -92,10 +96,15 @@ export default function OnchainTransfers() {
         <FilterItem label="备注"><Input value={remark} onChange={setRemark} placeholder="模糊搜索" /></FilterItem>
       </FilterBar>
 
-      <Flex direction="column" gap={2} mb={6}>
-        {collapsibleSection('链上充值', totalDeposit, expandDeposit, () => setExpandDeposit(!expandDeposit), 'deposit')}
-        {collapsibleSection('链上提现', totalWithdraw, expandWithdraw, () => setExpandWithdraw(!expandWithdraw), 'withdrawal')}
-      </Flex>
+      <Box mb={4}>
+        <FilteredStatsPanel title="全局统计" stats={globalStats} />
+      </Box>
+
+      {hasFilter && (
+        <Box mb={4}>
+          <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsData} />
+        </Box>
+      )}
 
       <DataTable data={filtered} columns={columns} />
     </Box>

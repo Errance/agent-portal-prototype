@@ -3,9 +3,10 @@ import { useSearchParams } from 'react-router-dom'
 import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
+import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
 import { FilterBar, Select, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
-import { dailyRevenue, commissionRecords, coinRanking, settlementConfig } from '@/mock/data'
-import type { DailyRevenue, CommissionRecord, CoinRanking } from '@/mock/types'
+import { dailyRevenue, commissionRecords, settlementConfig } from '@/mock/data'
+import type { DailyRevenue, CommissionRecord } from '@/mock/types'
 
 export default function RevenueCenter() {
   const [params] = useSearchParams()
@@ -21,7 +22,6 @@ export default function RevenueCenter() {
   const effectiveSettlement = settlementDisabled ? 'all' : settlement
 
   const totalCommission = commissionRecords.reduce((s, r) => r.payoutStatus === 'paid' ? s + r.commissionAmount : s, 0)
-  const pendingCommission = commissionRecords.reduce((s, r) => r.payoutStatus === 'pending' ? s + r.commissionAmount : s, 0)
 
   const filteredRecords = useMemo(() => {
     let data = commissionRecords
@@ -30,6 +30,20 @@ export default function RevenueCenter() {
     if (effectiveSettlement !== 'all') data = data.filter(r => r.settlementType === effectiveSettlement)
     return data
   }, [productLine, effectiveSettlement, preSourceUid])
+
+  const filteredStats = useMemo(() => {
+    const total = filteredRecords.reduce((s, r) => s + r.commissionAmount, 0)
+    const vol = filteredRecords.reduce((s, r) => s + (r.tradeVolume ?? 0), 0)
+    const perp = filteredRecords.filter(r => r.productLine === 'perpetual').reduce((s, r) => s + r.commissionAmount, 0)
+    const evt = filteredRecords.filter(r => r.productLine === 'event').reduce((s, r) => s + r.commissionAmount, 0)
+    return [
+      { label: '总返佣金额', value: total.toFixed(2), unit: 'USDT' },
+      { label: '总交易额', value: vol.toFixed(2), unit: 'USDT' },
+      { label: '记录条数', value: filteredRecords.length },
+      { label: '永续合约返佣', value: perp.toFixed(2), unit: 'USDT' },
+      { label: '事件合约返佣', value: evt.toFixed(2), unit: 'USDT' },
+    ]
+  }, [filteredRecords])
 
   const dailyColumns: Column<DailyRevenue>[] = [
     { key: 'date', label: '日期', render: r => r.date },
@@ -52,12 +66,6 @@ export default function RevenueCenter() {
     { key: 'amt', label: '返佣金额', render: r => r.commissionAmount.toFixed(2), sortable: true, sortKey: r => r.commissionAmount },
     { key: 'coin', label: '结算币种', render: r => r.settlementCoin },
     { key: 'status', label: '发放状态', render: r => <StatusBadge type="payout" value={r.payoutStatus} /> },
-  ]
-
-  const coinColumns: Column<CoinRanking>[] = [
-    { key: 'coin', label: '币种名称', render: r => <Text fontFamily="ISB">{r.coin}</Text> },
-    { key: 'qty', label: '数量', render: r => r.quantity.toLocaleString('en-US', { maximumFractionDigits: 4 }) },
-    { key: 'usdt', label: '折合 USDT', render: r => r.usdtValue.toLocaleString('en-US', { minimumFractionDigits: 2 }), sortable: true, sortKey: r => r.usdtValue },
   ]
 
   const tabTrigger = (val: string, label: string) => (
@@ -97,20 +105,14 @@ export default function RevenueCenter() {
         </Box>
       )}
 
-      <Flex gap={4} mb={6}>
-        <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius={{ base: '0', md: 'xl' }} p={5} flex={1}>
-          <Text fontSize="xs" color="gray.100" mb={1}>累计返佣（USDT）</Text>
-          <Text fontSize="2xl" fontFamily="ISB" color="text.100">{totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
-        </Box>
-        <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius={{ base: '0', md: 'xl' }} p={5} flex={1}>
-          <Text fontSize="xs" color="gray.100" mb={1}>待返佣（USDT）</Text>
-          <Text fontSize="2xl" fontFamily="ISB" color="text.100">{pendingCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
-        </Box>
-      </Flex>
+      <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius={{ base: '0', md: 'xl' }} p={5} mb={4}>
+        <Text fontSize="xs" color="gray.100" mb={1}>累计返佣（USDT）</Text>
+        <Text fontSize="2xl" fontFamily="ISB" color="text.100">{totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+        <Text fontSize="xs" color="gray.200" mt={1}>返佣实时到账</Text>
+      </Box>
 
-      <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius={{ base: '0', md: 'xl' }} p={{ base: 0, md: 5 }} mb={6}>
-        <Text fontFamily="ISB" mb={3} px={{ base: 3, md: 0 }} pt={{ base: 3, md: 0 }}>币种佣金排行</Text>
-        <DataTable data={coinRanking} columns={coinColumns} pageSize={10} />
+      <Box mb={6}>
+        <FilteredStatsPanel title="数据统计" stats={filteredStats} />
       </Box>
 
       <Tabs.Root value={tab} onValueChange={e => setTab(e.value)}>

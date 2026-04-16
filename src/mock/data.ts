@@ -1,6 +1,6 @@
 import type {
   AgentStatus, TradeVisibility, DashboardKPI, InviteCodeSummary,
-  Invitee, SubAgent, DailyRevenue, CommissionRecord, CoinRanking,
+  Invitee, SubAgent, DailyRevenue, CommissionRecord,
   PerpPosition, PerpOrder, EventOrder, InviteCode, TransferRecord,
   SettlementConfig, InviteStats,
 } from './types'
@@ -38,7 +38,6 @@ export const dashboardKPI: DashboardKPI[] = [
 // ─── Invite Code Summary (PRD 5.1.2) ───
 export const inviteCodeSummary: InviteCodeSummary[] = Array.from({ length: 8 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
-  clicks: Math.floor(Math.random() * 500) + 50,
   registrations: Math.floor(Math.random() * 100) + 5,
   perpRate: rand(0.3, 1.2),
   eventRate: rand(0.2, 1.0),
@@ -49,9 +48,7 @@ export const invitees: Invitee[] = [
   {
     uid: 'SELF',
     identityType: 'sub_agent',
-    kycStatus: 'verified',
     depositStatus: 'deposited',
-    tradeStatus: 'active',
     registeredAt: '2025-01-15 10:30:00',
     remark: '我自己',
     isSelf: true,
@@ -60,9 +57,7 @@ export const invitees: Invitee[] = [
   ...Array.from({ length: 50 }, (_, i) => ({
     uid: uid(i),
     identityType: pick(['regular', 'sub_agent'] as const),
-    kycStatus: pick(['verified', 'unverified'] as const),
     depositStatus: pick(['deposited', 'not_deposited'] as const),
-    tradeStatus: pick(['active', 'inactive', 'dormant'] as const),
     registeredAt: date(Math.floor(Math.random() * 90)),
     remark: i % 5 === 0 ? `备注${i}` : '',
   })),
@@ -91,7 +86,7 @@ export const dailyRevenue: DailyRevenue[] = Array.from({ length: 30 }, (_, i) =>
     flatFeeCommission: ff,
     profitShareCommission: ps,
     eventCommission: ev,
-    payoutStatus: pick(['paid', 'pending', 'frozen_pending'] as const),
+    payoutStatus: pick(['paid', 'frozen_pending'] as const),
   }
 })
 
@@ -108,19 +103,10 @@ export const commissionRecords: CommissionRecord[] = Array.from({ length: 100 },
     settlementType: isPerp ? pick(['flat_fee', 'profit_share'] as const) : null,
     tradeVolume: isDirect ? rand(1000, 50000) : null,
     commissionAmount: rand(5, 500),
-    settlementCoin: pick(['USDT', 'USDC', 'BTC', 'ETH']),
-    payoutStatus: pick(['paid', 'pending', 'frozen_pending'] as const),
+    settlementCoin: pick(['USDT', 'USDC']),
+    payoutStatus: pick(['paid', 'frozen_pending'] as const),
   }
 })
-
-// ─── Coin Ranking (PRD 5.3.3) ───
-export const coinRanking: CoinRanking[] = [
-  { coin: 'USDT', quantity: 12580.50, usdtValue: 12580.50 },
-  { coin: 'USDC', quantity: 4320.80, usdtValue: 4320.80 },
-  { coin: 'BTC', quantity: 0.0856, usdtValue: 5780.40 },
-  { coin: 'ETH', quantity: 1.245, usdtValue: 3986.00 },
-  { coin: 'SOL', quantity: 15.8, usdtValue: 2370.00 },
-]
 
 // ─── Settlement Config (PRD 5.3.6) ───
 export const settlementConfig: SettlementConfig = {
@@ -130,7 +116,7 @@ export const settlementConfig: SettlementConfig = {
 }
 
 // ─── Perp Positions (PRD 5.4.4) ───
-const pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'ARB/USDT', 'DOGE/USDT']
+const pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
 export const perpPositions: PerpPosition[] = Array.from({ length: 30 }, (_, i) => ({
   uid: uid(Math.floor(Math.random() * 50)),
   remark: i % 4 === 0 ? `VIP${i}` : '',
@@ -170,19 +156,13 @@ export const eventHistory: EventOrder[] = Array.from({ length: 30 }, (_, i) => (
 }))
 
 // ─── Invite Codes Full (PRD 5.5.2) ───
-const linkTypes = ['Twitter', 'Telegram', '线下活动', 'YouTube', 'Discord']
 export const inviteCodes: InviteCode[] = Array.from({ length: 20 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
-  linkType: pick(linkTypes),
   myPerpRate: agentConfig.currentPerpRate,
   subPerpRate: rand(0.3, agentConfig.currentPerpRate - 0.01),
   myEventRate: agentConfig.currentEventRate,
   subEventRate: rand(0.2, agentConfig.currentEventRate - 0.01),
-  pageType: pick(['默认', '自定义']),
-  linkCount: Math.floor(Math.random() * 3) + 1,
-  clicks: Math.floor(Math.random() * 500) + 20,
   registrations: Math.floor(Math.random() * 80) + 2,
-  kycCount: Math.floor(Math.random() * 60) + 1,
   firstDepositCount: Math.floor(Math.random() * 40) + 1,
   firstTradeCount: Math.floor(Math.random() * 30) + 1,
   tradeDau: Math.floor(Math.random() * 20),
@@ -195,7 +175,6 @@ export const inviteCodes: InviteCode[] = Array.from({ length: 20 }, (_, i) => ({
 
 // ─── Invite Stats (PRD 5.5.3) ───
 export const inviteStats: InviteStats = {
-  clicks: inviteCodes.reduce((s, c) => s + c.clicks, 0),
   registrations: inviteCodes.reduce((s, c) => s + c.registrations, 0),
   depositAmount: rand(50000, 200000),
   tradeVolume: rand(500000, 3000000),

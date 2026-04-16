@@ -8,7 +8,6 @@ import type { InviteCodeSummary } from '@/mock/types'
 
 const columns: Column<InviteCodeSummary>[] = [
   { key: 'code', label: '邀请码', render: r => <Text color="theme" fontFamily="ISB">{r.code}</Text> },
-  { key: 'clicks', label: '点击人数', render: r => r.clicks, sortable: true, sortKey: r => r.clicks },
   { key: 'regs', label: '注册人数', render: r => r.registrations, sortable: true, sortKey: r => r.registrations },
   { key: 'perpRate', label: '永续返佣比例', render: r => `${r.perpRate}%` },
   { key: 'eventRate', label: '事件返佣比例', render: r => `${r.eventRate}%` },

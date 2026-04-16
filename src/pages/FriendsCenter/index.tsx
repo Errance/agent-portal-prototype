@@ -11,15 +11,13 @@ import type { Invitee, SubAgent } from '@/mock/types'
 
 const stats = [
   { label: '注册人数', value: invitees.length - 1 },
-  { label: '身份认证人数', value: invitees.filter(u => !u.isSelf && u.kycStatus === 'verified').length },
-  { label: '首次充值人数', value: invitees.filter(u => !u.isSelf && u.depositStatus === 'deposited').length },
-  { label: '首次交易人数', value: invitees.filter(u => !u.isSelf && u.tradeStatus === 'active').length },
+  { label: '已充值人数', value: invitees.filter(u => !u.isSelf && u.depositStatus === 'deposited').length },
+  { label: '已交易人数', value: invitees.filter(u => !u.isSelf && u.depositStatus === 'deposited').length },
 ]
 
 export default function FriendsCenter() {
   const { selfRebateEnabled, isFrozen } = useAgent()
   const [tab, setTab] = useState('0')
-  const [actFilter, setActFilter] = useState('all')
   const [idFilter, setIdFilter] = useState('all')
   const [editUid, setEditUid] = useState<string | null>(null)
   const [editVal, setEditVal] = useState('')
@@ -46,9 +44,8 @@ export default function FriendsCenter() {
         </Text>
       ),
     },
-    { key: 'kyc', label: '身份认证状态', render: r => <StatusBadge type="kyc" value={r.kycStatus} /> },
-    { key: 'deposit', label: '首次充值', render: r => <StatusBadge type="deposit" value={r.depositStatus} /> },
-    { key: 'trade', label: '最近交易状态', render: r => <StatusBadge type="trade" value={r.tradeStatus} /> },
+    { key: 'identity', label: '用户身份', render: r => r.isSelf ? '代理商' : r.identityType === 'sub_agent' ? '子代理' : '普通用户' },
+    { key: 'deposit', label: '充值状态', render: r => <StatusBadge type="deposit" value={r.depositStatus} /> },
     { key: 'time', label: '注册时间', render: r => r.registeredAt },
     { key: 'remark', label: '备注', render: r => remarks[r.uid] || r.remark || '—' },
     {
@@ -114,14 +111,7 @@ export default function FriendsCenter() {
             {stats.map(s => <StatCard key={s.label} label={s.label} value={s.value} />)}
           </Flex>
 
-          <FilterBar onSearch={() => {}} onReset={() => { setActFilter('all'); setIdFilter('all') }}>
-            <FilterItem label="用户动态">
-              <Select value={actFilter} onChange={setActFilter} options={[
-                { label: '全部', value: 'all' }, { label: '最近注册', value: 'recent_reg' },
-                { label: '最近充值', value: 'recent_dep' }, { label: '最近未交易', value: 'no_trade' },
-                { label: '最近未登录', value: 'no_login' },
-              ]} />
-            </FilterItem>
+          <FilterBar onSearch={() => {}} onReset={() => { setIdFilter('all') }}>
             <FilterItem label="用户身份">
               <Select value={idFilter} onChange={setIdFilter} options={[
                 { label: '全部', value: 'all' }, { label: '普通用户', value: 'regular' },

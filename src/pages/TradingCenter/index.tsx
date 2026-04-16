@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Navigate } from 'react-router-dom'
 import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
+import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
 import { FilterBar, Select, Input, FilterItem } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
 import { perpPositions, perpHistory, eventHistory } from '@/mock/data'
@@ -66,6 +67,35 @@ export default function TradingCenter() {
     if (remark) res = res.filter(r => r.remark.toLowerCase().includes(remark.toLowerCase()))
     return res
   }
+
+  const filteredPerpPos = useMemo(() => filterFn(perpPositions), [uid, remark])
+  const filteredPerpHist = useMemo(() => filterFn(perpHistory), [uid, remark])
+  const filteredEvent = useMemo(() => filterFn(eventHistory), [uid, remark])
+
+  const statsForTab = useMemo(() => {
+    if (tab === '0') {
+      const data = filteredPerpPos
+      return [
+        { label: '总持仓数', value: data.length },
+        { label: '总数量', value: +data.reduce((s, r) => s + r.quantity, 0).toFixed(4) },
+        { label: '总未实现盈亏', value: data.reduce((s, r) => s + r.unrealizedPnl, 0).toFixed(2), unit: 'USDT' },
+      ]
+    } else if (tab === '1') {
+      const data = filteredPerpHist
+      return [
+        { label: '总订单数', value: data.length },
+        { label: '总交易量', value: data.reduce((s, r) => s + r.price * r.quantity, 0).toFixed(2), unit: 'USDT' },
+        { label: '总手续费', value: data.reduce((s, r) => s + r.fee, 0).toFixed(2), unit: 'USDT' },
+      ]
+    } else {
+      const data = filteredEvent
+      return [
+        { label: '总订单数', value: data.length },
+        { label: '总下注额', value: data.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+        { label: '总盈亏', value: data.reduce((s, r) => s + r.pnl, 0).toFixed(2), unit: 'USDT' },
+      ]
+    }
+  }, [tab, filteredPerpPos, filteredPerpHist, filteredEvent])
 
   const tabTrigger = (val: string, label: string) => (
     <Tabs.Trigger value={val} px={4} py={3} fontSize="sm"
@@ -156,14 +186,18 @@ export default function TradingCenter() {
               )}
             </FilterBar>
 
+            <Box mb={4}>
+              <FilteredStatsPanel title="数据统计" stats={statsForTab} />
+            </Box>
+
             <Tabs.Content value="0">
-              {tab === '0' && <DataTable data={filterFn(perpPositions)} columns={allPerpPosCols.filter(c => !hiddenCols.has(c.key))} />}
+              {tab === '0' && <DataTable data={filteredPerpPos} columns={allPerpPosCols.filter(c => !hiddenCols.has(c.key))} />}
             </Tabs.Content>
             <Tabs.Content value="1">
-              {tab === '1' && <DataTable data={filterFn(perpHistory)} columns={allPerpHistCols.filter(c => !hiddenCols.has(c.key))} />}
+              {tab === '1' && <DataTable data={filteredPerpHist} columns={allPerpHistCols.filter(c => !hiddenCols.has(c.key))} />}
             </Tabs.Content>
             <Tabs.Content value="2">
-              {tab === '2' && <DataTable data={filterFn(eventHistory)} columns={allEventCols.filter(c => !hiddenCols.has(c.key))} />}
+              {tab === '2' && <DataTable data={filteredEvent} columns={allEventCols.filter(c => !hiddenCols.has(c.key))} />}
             </Tabs.Content>
           </Tabs.Root>
         </>

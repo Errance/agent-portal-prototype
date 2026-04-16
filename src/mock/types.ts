@@ -2,12 +2,10 @@ export type AgentStatus = 'normal' | 'frozen' | 'not_agent'
 export type TradeVisibility = 'full' | 'summary' | 'hidden'
 export type ProductLine = 'all' | 'perpetual' | 'event'
 export type SettlementType = 'all' | 'flat_fee' | 'profit_share'
-export type PayoutStatus = 'paid' | 'pending' | 'frozen_pending'
+export type PayoutStatus = 'paid' | 'frozen_pending'
 export type SourceType = 'direct' | 'platform_reward'
 export type IdentityType = 'regular' | 'sub_agent'
-export type KycStatus = 'verified' | 'unverified'
 export type DepositStatus = 'deposited' | 'not_deposited'
-export type TradeStatus = 'active' | 'inactive' | 'dormant'
 export type TransferType = 'deposit' | 'withdrawal'
 export type TransferSubType = 'normal' | 'internal_transfer'
 export type TransferStatus = 'processing' | 'success' | 'failed'
@@ -25,7 +23,6 @@ export interface DashboardKPI {
 
 export interface InviteCodeSummary {
   code: string
-  clicks: number
   registrations: number
   perpRate: number
   eventRate: number
@@ -34,9 +31,7 @@ export interface InviteCodeSummary {
 export interface Invitee {
   uid: string
   identityType: IdentityType
-  kycStatus: KycStatus
   depositStatus: DepositStatus
-  tradeStatus: TradeStatus
   registeredAt: string
   remark: string
   isSelf?: boolean
@@ -76,12 +71,6 @@ export interface CommissionRecord {
   payoutStatus: PayoutStatus
 }
 
-export interface CoinRanking {
-  coin: string
-  quantity: number
-  usdtValue: number
-}
-
 export interface PerpPosition {
   uid: string
   remark: string
@@ -119,16 +108,11 @@ export interface EventOrder {
 
 export interface InviteCode {
   code: string
-  linkType: string
   myPerpRate: number
   subPerpRate: number
   myEventRate: number
   subEventRate: number
-  pageType: string
-  linkCount: number
-  clicks: number
   registrations: number
-  kycCount: number
   firstDepositCount: number
   firstTradeCount: number
   tradeDau: number
@@ -160,7 +144,6 @@ export interface SettlementConfig {
 }
 
 export interface InviteStats {
-  clicks: number
   registrations: number
   depositAmount: number
   tradeVolume: number
