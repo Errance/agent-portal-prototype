@@ -1,7 +1,6 @@
 import { useState, useMemo } from 'react'
 import { Box, Flex, Text, HStack } from '@chakra-ui/react'
-import StatCard from '@/components/shared/StatCard'
-import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
+import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import { FilterBar, Input, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
@@ -9,11 +8,12 @@ import { inviteCodes as initialCodes, inviteStats } from '@/mock/data'
 import type { InviteCode } from '@/mock/types'
 
 export default function InvitePromotion() {
-  const { isFrozen, currentPerpRate, currentEventRate } = useAgent()
+  const { isFrozen, currentFlatFeeRate, currentProfitShareRate, currentEventRate } = useAgent()
   const [codes, setCodes] = useState(initialCodes)
   const [showCreate, setShowCreate] = useState(false)
   const [createdCode, setCreatedCode] = useState<InviteCode | null>(null)
-  const [perpRate, setPerpRate] = useState('')
+  const [ffRate, setFfRate] = useState('')
+  const [psRate, setPsRate] = useState('')
   const [eventRate, setEventRate] = useState('')
   const [cRemark, setCRemark] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -27,15 +27,16 @@ export default function InvitePromotion() {
 
   const validate = () => {
     const e: Record<string, string> = {}
-    const pr = parseFloat(perpRate); const er = parseFloat(eventRate)
-    if (!perpRate || isNaN(pr)) e.perp = '请输入永续合约返佣比例'
-    else if (pr <= 0) e.perp = '必须大于 0'
-    else if (pr >= currentPerpRate) e.perp = `必须小于自身比例 ${currentPerpRate}%`
-    else if (Math.round(pr * 100) !== pr * 100) e.perp = '最小步长为 0.01%'
-    if (!eventRate || isNaN(er)) e.event = '请输入事件合约返佣比例'
-    else if (er <= 0) e.event = '必须大于 0'
-    else if (er >= currentEventRate) e.event = `必须小于自身比例 ${currentEventRate}%`
-    else if (Math.round(er * 100) !== er * 100) e.event = '最小步长为 0.01%'
+    const f = parseFloat(ffRate); const p = parseFloat(psRate); const ev = parseFloat(eventRate)
+    if (!ffRate || isNaN(f)) e.ff = '请输入'
+    else if (f <= 0) e.ff = '必须大于 0'
+    else if (f >= currentFlatFeeRate) e.ff = `必须 < ${currentFlatFeeRate}%`
+    if (!psRate || isNaN(p)) e.ps = '请输入'
+    else if (p <= 0) e.ps = '必须大于 0'
+    else if (p >= currentProfitShareRate) e.ps = `必须 < ${currentProfitShareRate}%`
+    if (!eventRate || isNaN(ev)) e.event = '请输入'
+    else if (ev <= 0) e.event = '必须大于 0'
+    else if (ev >= currentEventRate) e.event = `必须 < ${currentEventRate}%`
     setErrors(e)
     return Object.keys(e).length === 0
   }
@@ -44,7 +45,8 @@ export default function InvitePromotion() {
     if (!validate()) return
     const newCode: InviteCode = {
       code: `TF${String(2000 + codes.length)}`,
-      myPerpRate: currentPerpRate, subPerpRate: parseFloat(perpRate),
+      myFlatFeeRate: currentFlatFeeRate, subFlatFeeRate: parseFloat(ffRate),
+      myProfitShareRate: currentProfitShareRate, subProfitShareRate: parseFloat(psRate),
       myEventRate: currentEventRate, subEventRate: parseFloat(eventRate),
       registrations: 0, firstDepositCount: 0, firstTradeCount: 0,
       tradeDau: 0, tradeVolume: 0, commission: 0,
@@ -54,7 +56,7 @@ export default function InvitePromotion() {
     setCodes(prev => [newCode, ...prev])
     setShowCreate(false)
     setCreatedCode(newCode)
-    setPerpRate(''); setEventRate(''); setCRemark('')
+    setFfRate(''); setPsRate(''); setEventRate(''); setCRemark('')
   }
 
   const copyLink = (url: string, code: string) => {
@@ -66,20 +68,27 @@ export default function InvitePromotion() {
     return true
   })
 
-  const filteredStatsData = useMemo(() => {
-    return [
-      { label: '注册人数', value: filtered.reduce((s, c) => s + c.registrations, 0), unit: '人' },
-      { label: '充值人数', value: filtered.reduce((s, c) => s + c.firstDepositCount, 0), unit: '人' },
-      { label: '交易额', value: filtered.reduce((s, c) => s + c.tradeVolume, 0).toFixed(2), unit: 'USDT' },
-      { label: '佣金', value: filtered.reduce((s, c) => s + c.commission, 0).toFixed(2), unit: 'USDT' },
-      { label: '交易 DAU', value: filtered.reduce((s, c) => s + c.tradeDau, 0), unit: '人' },
-    ]
-  }, [filtered])
+  const globalStatsData = [
+    { label: '注册', value: inviteStats.registrations, unit: '人' },
+    { label: '充值', value: inviteStats.depositAmount.toFixed(2), unit: 'USDT' },
+    { label: '交易额', value: inviteStats.tradeVolume.toFixed(2), unit: 'USDT' },
+    { label: '佣金', value: inviteStats.commission.toFixed(2), unit: 'USDT' },
+    { label: 'DAU', value: inviteStats.tradeDau, unit: '人' },
+  ]
+
+  const filteredStatsData = useMemo(() => [
+    { label: '注册', value: filtered.reduce((s, c) => s + c.registrations, 0), unit: '人' },
+    { label: '充值', value: filtered.reduce((s, c) => s + c.firstDepositCount, 0), unit: '人' },
+    { label: '交易额', value: filtered.reduce((s, c) => s + c.tradeVolume, 0).toFixed(2), unit: 'USDT' },
+    { label: '佣金', value: filtered.reduce((s, c) => s + c.commission, 0).toFixed(2), unit: 'USDT' },
+    { label: 'DAU', value: filtered.reduce((s, c) => s + c.tradeDau, 0), unit: '人' },
+  ], [filtered])
 
   const columns: Column<InviteCode>[] = [
-    { key: 'code', label: '邀请码', render: r => <Text color="theme" fontFamily="ISB">{r.code}</Text>, minW: '100px' },
-    { key: 'perpRate', label: '下级永续返佣比例', render: r => `${r.subPerpRate}%` },
-    { key: 'eventRate', label: '下级事件返佣比例', render: r => `${r.subEventRate}%` },
+    { key: 'code', label: '邀请码', render: r => <Text color="theme" fontFamily="ISB">{r.code}</Text>, minW: '80px' },
+    { key: 'ffRate', label: 'FF(我/下级)', render: r => `${r.myFlatFeeRate}% / ${r.subFlatFeeRate}%` },
+    { key: 'psRate', label: 'PS(我/下级)', render: r => `${r.myProfitShareRate}% / ${r.subProfitShareRate}%` },
+    { key: 'eventRate', label: '事件(我/下级)', render: r => `${r.myEventRate}% / ${r.subEventRate}%` },
     { key: 'regs', label: '注册', render: r => r.registrations, sortable: true, sortKey: r => r.registrations },
     { key: 'dep', label: '充值', render: r => r.firstDepositCount },
     { key: 'trade', label: '交易', render: r => r.firstTradeCount },
@@ -95,12 +104,12 @@ export default function InvitePromotion() {
     },
   ]
 
-  const formInput = (label: string, val: string, onChange: (v: string) => void, error?: string, extra?: string, type?: string) => (
+  const formInput = (label: string, val: string, onChange: (v: string) => void, error?: string, extra?: string) => (
     <Box>
       <Text fontSize="14px" color="gray.100" mb="6px">{label}{extra && <Text as="span" color="gray.200" fontSize="12px"> {extra}</Text>}</Text>
       <Box as="input" w="100%" h="40px" bg="bg.100" border="1px solid"
         borderColor={error ? 'red.100' : 'border.100'} borderRadius="6px" px={3}
-        fontSize="14px" color="text.100" outline="none" type={type || 'text'}
+        fontSize="14px" color="text.100" outline="none" type="number"
         value={val} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
         _focus={{ borderColor: error ? 'red.100' : 'theme' }} />
       {error && <Text fontSize="12px" color="red.100" mt="4px">{error}</Text>}
@@ -109,8 +118,15 @@ export default function InvitePromotion() {
 
   return (
     <Box>
-      <Flex justify="space-between" align="center" mb="16px">
-        <Text fontFamily="ISB" fontSize="16px">邀请链接</Text>
+      <Flex justify="space-between" align="center" mb="4px">
+        <Flex align="baseline" gap="24px">
+          <Text fontFamily="ISB" fontSize="16px">邀请链接</Text>
+          <Flex gap="16px" fontSize="13px" color="gray.100">
+            <Text>FF <Text as="span" fontFamily="ISB" color="text.100">{currentFlatFeeRate}%</Text></Text>
+            <Text>PS <Text as="span" fontFamily="ISB" color="text.100">{currentProfitShareRate}%</Text></Text>
+            <Text>事件 <Text as="span" fontFamily="ISB" color="text.100">{currentEventRate}%</Text></Text>
+          </Flex>
+        </Flex>
         <Box as="button" px="16px" py="8px" bg={isFrozen ? 'bg.300' : 'nav.bg'}
           color={isFrozen ? 'gray.100' : '#fff'} borderRadius="6px" fontSize="14px" fontFamily="ISB"
           cursor={isFrozen ? 'not-allowed' : 'pointer'} onClick={() => !isFrozen && setShowCreate(true)}
@@ -126,21 +142,8 @@ export default function InvitePromotion() {
         </FilterItem>
       </FilterBar>
 
-      <Flex gap="12px" mb="16px" flexWrap="wrap">
-        <StatCard label="我的永续返佣比例" value={`${currentPerpRate}%`} />
-        <StatCard label="我的事件返佣比例" value={`${currentEventRate}%`} />
-        <StatCard label="注册人数" value={inviteStats.registrations} unit="人" />
-        <StatCard label="充值（USDT）" value={inviteStats.depositAmount} unit="USDT" />
-        <StatCard label="交易额（USDT）" value={inviteStats.tradeVolume} unit="USDT" />
-        <StatCard label="佣金（USDT）" value={inviteStats.commission} unit="USDT" />
-        <StatCard label="交易 DAU" value={inviteStats.tradeDau} unit="人" />
-      </Flex>
-
-      {hasFilter && (
-        <Box mb="16px">
-          <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsData} />
-        </Box>
-      )}
+      <InlineStatsBar stats={globalStatsData} />
+      {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStatsData} />}
 
       <DataTable data={filtered} columns={columns} stickyRight />
 
@@ -151,9 +154,17 @@ export default function InvitePromotion() {
             boxShadow="0 8px 32px rgba(0,0,0,0.08)" onClick={e => e.stopPropagation()}>
             <Text fontFamily="ISB" fontSize="18px" mb="16px">新建邀请码</Text>
             <Flex direction="column" gap="16px">
-              {formInput('永续合约返佣比例（%）', perpRate, setPerpRate, errors.perp, `自身: ${currentPerpRate}%`, 'number')}
-              {formInput('事件合约返佣比例（%）', eventRate, setEventRate, errors.event, `自身: ${currentEventRate}%`, 'number')}
-              {formInput('备注（可选）', cRemark, setCRemark)}
+              {formInput('Flat Fee 返佣比例（%）', ffRate, setFfRate, errors.ff, `自身: ${currentFlatFeeRate}%`)}
+              {formInput('Profit Share 返佣比例（%）', psRate, setPsRate, errors.ps, `自身: ${currentProfitShareRate}%`)}
+              {formInput('事件合约返佣比例（%）', eventRate, setEventRate, errors.event, `自身: ${currentEventRate}%`)}
+              <Box>
+                <Text fontSize="14px" color="gray.100" mb="6px">备注（可选）</Text>
+                <Box as="input" w="100%" h="40px" bg="bg.100" border="1px solid"
+                  borderColor="border.100" borderRadius="6px" px={3}
+                  fontSize="14px" color="text.100" outline="none"
+                  value={cRemark} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCRemark(e.target.value)}
+                  _focus={{ borderColor: 'theme' }} />
+              </Box>
               <Text fontSize="12px" color="gray.100">如需修改已创建邀请码的返佣比例，请联系平台运营专员。</Text>
             </Flex>
             <Flex justify="flex-end" gap="8px" mt="20px">
@@ -182,15 +193,10 @@ export default function InvitePromotion() {
                 <Text fontSize="14px" color="gray.100">邀请码</Text>
                 <Text fontFamily="ISB" fontSize="24px" color="theme" mt="4px">{createdCode.code}</Text>
               </Box>
-              <Flex gap="24px">
-                <Box>
-                  <Text fontSize="14px" color="gray.100">下级永续返佣比例</Text>
-                  <Text fontFamily="ISB" fontSize="16px" mt="4px">{createdCode.subPerpRate}%</Text>
-                </Box>
-                <Box>
-                  <Text fontSize="14px" color="gray.100">下级事件返佣比例</Text>
-                  <Text fontFamily="ISB" fontSize="16px" mt="4px">{createdCode.subEventRate}%</Text>
-                </Box>
+              <Flex gap="24px" flexWrap="wrap">
+                <Box><Text fontSize="13px" color="gray.100">FF 比例</Text><Text fontFamily="ISB" mt="2px">{createdCode.subFlatFeeRate}%</Text></Box>
+                <Box><Text fontSize="13px" color="gray.100">PS 比例</Text><Text fontFamily="ISB" mt="2px">{createdCode.subProfitShareRate}%</Text></Box>
+                <Box><Text fontSize="13px" color="gray.100">事件比例</Text><Text fontFamily="ISB" mt="2px">{createdCode.subEventRate}%</Text></Box>
               </Flex>
               <Box>
                 <Text fontSize="14px" color="gray.100">邀请链接</Text>
@@ -204,10 +210,7 @@ export default function InvitePromotion() {
                 </Flex>
               </Box>
               {createdCode.remark && (
-                <Box>
-                  <Text fontSize="14px" color="gray.100">备注</Text>
-                  <Text fontSize="14px" mt="4px">{createdCode.remark}</Text>
-                </Box>
+                <Box><Text fontSize="14px" color="gray.100">备注</Text><Text fontSize="14px" mt="4px">{createdCode.remark}</Text></Box>
               )}
             </Flex>
           </Box>

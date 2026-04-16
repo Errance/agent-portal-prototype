@@ -26,7 +26,8 @@ export interface DashboardKPI {
 export interface InviteCodeSummary {
   code: string
   registrations: number
-  perpRate: number
+  flatFeeRate: number
+  profitShareRate: number
   eventRate: number
 }
 
@@ -39,12 +40,16 @@ export interface Invitee {
   remark: string
   isSelf?: boolean
   selfRebateAmount?: number
+  flatFeeCommission: number
+  profitShareCommission: number
+  eventCommission: number
 }
 
 export interface SubAgent {
   uid: string
   nickname: string
-  perpRate: number
+  flatFeeRate: number
+  profitShareRate: number
   eventRate: number
   registeredAt: string
   totalDirectCommission: number
@@ -111,8 +116,10 @@ export interface EventOrder {
 
 export interface InviteCode {
   code: string
-  myPerpRate: number
-  subPerpRate: number
+  myFlatFeeRate: number
+  subFlatFeeRate: number
+  myProfitShareRate: number
+  subProfitShareRate: number
   myEventRate: number
   subEventRate: number
   registrations: number
@@ -130,9 +137,7 @@ export interface TransferRecord {
   uid: string
   userLevel: IdentityType
   subAgentUid: string | null
-  remark: string
   channel: string
-  transferId: string
   type: TransferType
   subType: TransferSubType
   amount: number

@@ -5,19 +5,18 @@ import type {
   SettlementConfig, InviteStats,
 } from './types'
 
-// ─── Global Config (switchable for demo) ───
 export const agentConfig = {
   status: 'normal' as AgentStatus,
   selfRebateEnabled: true,
   tradeVisibility: 'full' as TradeVisibility,
   isNewAgent: false,
-  currentPerpRate: 1.5,
+  currentFlatFeeRate: 0.80,
+  currentProfitShareRate: 0.70,
   currentEventRate: 1.2,
   agentName: '王大拿BG',
   agentLevel: 3 as AgentLevel,
 }
 
-// ─── Helpers ───
 const uid = (i: number) => `UID${String(100000 + i)}`
 const date = (daysAgo: number) => {
   const d = new Date()
@@ -28,7 +27,6 @@ const dateOnly = (daysAgo: number) => date(daysAgo).slice(0, 10)
 const rand = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 100) / 100
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 
-// ─── Dashboard KPI (PRD 5.1.1: 5 indicators) ───
 export const dashboardKPI: DashboardKPI[] = [
   { label: '今日注册数（人）', value: 23, unit: '人', changePercent: 15.0 },
   { label: '今日净充值（USDT）', value: 45280.50, unit: 'USDT', changePercent: -8.3 },
@@ -37,15 +35,14 @@ export const dashboardKPI: DashboardKPI[] = [
   { label: '今日佣金（USDT）', value: 3842.65, unit: 'USDT', changePercent: 22.1 },
 ]
 
-// ─── Invite Code Summary (PRD 5.1.2) ───
 export const inviteCodeSummary: InviteCodeSummary[] = Array.from({ length: 8 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
   registrations: Math.floor(Math.random() * 100) + 5,
-  perpRate: rand(0.3, 1.2),
+  flatFeeRate: rand(0.1, 0.6),
+  profitShareRate: rand(0.1, 0.5),
   eventRate: rand(0.2, 1.0),
 }))
 
-// ─── Invitees (PRD 5.2.1) ───
 export const invitees: Invitee[] = [
   {
     uid: 'SELF',
@@ -56,31 +53,37 @@ export const invitees: Invitee[] = [
     remark: '我自己',
     isSelf: true,
     selfRebateAmount: 245.60,
+    flatFeeCommission: 0,
+    profitShareCommission: 0,
+    eventCommission: 0,
   },
   ...Array.from({ length: 50 }, (_, i) => {
     const dep = pick(['deposited', 'not_deposited'] as const)
+    const traded = dep === 'deposited' && Math.random() > 0.3
     return {
       uid: uid(i),
       identityType: pick(['regular', 'sub_agent'] as const),
       depositStatus: dep,
-      tradeStatus: (dep === 'deposited' && Math.random() > 0.3 ? 'traded' : 'not_traded') as const,
+      tradeStatus: (traded ? 'traded' : 'not_traded') as const,
       registeredAt: date(Math.floor(Math.random() * 90)),
       remark: i % 5 === 0 ? `备注${i}` : '',
+      flatFeeCommission: traded ? rand(5, 500) : 0,
+      profitShareCommission: traded ? rand(3, 300) : 0,
+      eventCommission: traded ? rand(1, 200) : 0,
     }
   }),
 ]
 
-// ─── Sub-Agents (PRD 5.2.2) ───
 export const subAgents: SubAgent[] = Array.from({ length: 15 }, (_, i) => ({
   uid: uid(200 + i),
   nickname: `Agent_${String.fromCharCode(65 + i)}`,
-  perpRate: rand(0.3, 1.2),
+  flatFeeRate: rand(0.1, 0.6),
+  profitShareRate: rand(0.1, 0.5),
   eventRate: rand(0.2, 0.9),
   registeredAt: date(Math.floor(Math.random() * 180)),
   totalDirectCommission: rand(100, 15000),
 }))
 
-// ─── Daily Revenue (PRD 5.3.4) ───
 export const dailyRevenue: DailyRevenue[] = Array.from({ length: 30 }, (_, i) => {
   const ff = rand(50, 800)
   const ps = rand(30, 500)
@@ -97,7 +100,6 @@ export const dailyRevenue: DailyRevenue[] = Array.from({ length: 30 }, (_, i) =>
   }
 })
 
-// ─── Commission Records (PRD 5.3.5 + 4.7 visibility rules) ───
 export const commissionRecords: CommissionRecord[] = Array.from({ length: 100 }, (_, i) => {
   const isDirect = Math.random() > 0.3
   const isPerp = Math.random() > 0.4
@@ -115,14 +117,12 @@ export const commissionRecords: CommissionRecord[] = Array.from({ length: 100 },
   }
 })
 
-// ─── Settlement Config (PRD 5.3.6) ───
 export const settlementConfig: SettlementConfig = {
   method: '实时结算',
   frequency: '交易产生后实时到账',
   coin: 'USDT',
 }
 
-// ─── Perp Positions (PRD 5.4.4) ───
 const pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
 export const perpPositions: PerpPosition[] = Array.from({ length: 30 }, (_, i) => ({
   uid: uid(Math.floor(Math.random() * 50)),
@@ -136,7 +136,6 @@ export const perpPositions: PerpPosition[] = Array.from({ length: 30 }, (_, i) =
   leverage: pick([2, 5, 10, 20, 50]),
 }))
 
-// ─── Perp Orders (PRD 5.4.4) ───
 export const perpHistory: PerpOrder[] = Array.from({ length: 30 }, (_, i) => ({
   uid: uid(Math.floor(Math.random() * 50)),
   remark: i % 3 === 0 ? `Note${i}` : '',
@@ -149,7 +148,6 @@ export const perpHistory: PerpOrder[] = Array.from({ length: 30 }, (_, i) => ({
   time: date(Math.floor(Math.random() * 30)),
 }))
 
-// ─── Event Orders (PRD 5.4.4) ───
 const events = ['BTC 价格预测', 'ETH 价格预测', '黄金走势', '美元指数', 'SOL 突破']
 export const eventHistory: EventOrder[] = Array.from({ length: 30 }, (_, i) => ({
   uid: uid(Math.floor(Math.random() * 50)),
@@ -162,11 +160,12 @@ export const eventHistory: EventOrder[] = Array.from({ length: 30 }, (_, i) => (
   time: date(Math.floor(Math.random() * 30)),
 }))
 
-// ─── Invite Codes Full (PRD 5.5.2) ───
 export const inviteCodes: InviteCode[] = Array.from({ length: 20 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
-  myPerpRate: agentConfig.currentPerpRate,
-  subPerpRate: rand(0.3, agentConfig.currentPerpRate - 0.01),
+  myFlatFeeRate: agentConfig.currentFlatFeeRate,
+  subFlatFeeRate: rand(0.1, agentConfig.currentFlatFeeRate - 0.01),
+  myProfitShareRate: agentConfig.currentProfitShareRate,
+  subProfitShareRate: rand(0.1, agentConfig.currentProfitShareRate - 0.01),
   myEventRate: agentConfig.currentEventRate,
   subEventRate: rand(0.2, agentConfig.currentEventRate - 0.01),
   registrations: Math.floor(Math.random() * 80) + 2,
@@ -180,7 +179,6 @@ export const inviteCodes: InviteCode[] = Array.from({ length: 20 }, (_, i) => ({
   remark: i % 3 === 0 ? `推广${i}` : '',
 }))
 
-// ─── Invite Stats (PRD 5.5.3) ───
 export const inviteStats: InviteStats = {
   registrations: inviteCodes.reduce((s, c) => s + c.registrations, 0),
   depositAmount: rand(50000, 200000),
@@ -189,7 +187,6 @@ export const inviteStats: InviteStats = {
   tradeDau: Math.floor(Math.random() * 80) + 10,
 }
 
-// ─── Transfer Records (PRD 5.6.3) ───
 const channels = ['ERC-20', 'TRC-20', 'SOL', 'BSC', 'Arbitrum']
 export const transferRecords: TransferRecord[] = Array.from({ length: 40 }, (_, i) => {
   const isSubAgent = Math.random() > 0.6
@@ -197,9 +194,7 @@ export const transferRecords: TransferRecord[] = Array.from({ length: 40 }, (_, 
     uid: uid(Math.floor(Math.random() * 50)),
     userLevel: isSubAgent ? 'sub_agent' : 'regular',
     subAgentUid: isSubAgent ? uid(200 + Math.floor(Math.random() * 15)) : null,
-    remark: i % 5 === 0 ? `转账备注${i}` : '',
     channel: pick(channels),
-    transferId: `0x${Array.from({ length: 16 }, () => Math.floor(Math.random() * 16).toString(16)).join('')}`,
     type: pick(['deposit', 'withdrawal'] as const),
     subType: pick(['normal', 'internal_transfer'] as const),
     amount: rand(10, 50000),

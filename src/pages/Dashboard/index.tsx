@@ -1,4 +1,4 @@
-import { Box, Flex, Text, HStack } from '@chakra-ui/react'
+import { Box, Flex, Text, HStack, Grid } from '@chakra-ui/react'
 import { Link } from 'react-router-dom'
 import StatCard from '@/components/shared/StatCard'
 import DataTable, { type Column } from '@/components/shared/DataTable'
@@ -14,7 +14,8 @@ const LEVEL_NAMES: Record<AgentLevel, string> = {
 const columns: Column<InviteCodeSummary>[] = [
   { key: 'code', label: '邀请码', render: r => <Text color="theme" fontFamily="ISB">{r.code}</Text> },
   { key: 'regs', label: '注册人数', render: r => r.registrations, sortable: true, sortKey: r => r.registrations },
-  { key: 'perpRate', label: '永续返佣比例', render: r => `${r.perpRate}%` },
+  { key: 'ffRate', label: 'Flat Fee 比例', render: r => `${r.flatFeeRate}%` },
+  { key: 'psRate', label: 'Profit Share 比例', render: r => `${r.profitShareRate}%` },
   { key: 'eventRate', label: '事件返佣比例', render: r => `${r.eventRate}%` },
 ]
 
@@ -86,7 +87,7 @@ export default function Dashboard() {
         </Box>
       )}
 
-      <Flex gap="16px" mb="24px" flexWrap="wrap">
+      <Grid templateColumns="repeat(auto-fill, minmax(220px, 1fr))" gap="16px" mb="24px">
         {dashboardKPI.map(kpi => (
           <StatCard
             key={kpi.label}
@@ -96,7 +97,7 @@ export default function Dashboard() {
             changePercent={kpi.changePercent}
           />
         ))}
-      </Flex>
+      </Grid>
 
       <Box
         border="1px solid"

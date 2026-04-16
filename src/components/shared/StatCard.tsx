@@ -19,7 +19,6 @@ export default function StatCard({ label, value, unit, changePercent }: StatCard
       borderColor="border.100"
       borderRadius="12px"
       p="17px"
-      flex={1}
       minW="180px"
     >
       <Box

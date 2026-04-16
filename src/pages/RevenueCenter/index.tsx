@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
-import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
+import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
 import { dailyRevenue, commissionRecords, settlementConfig } from '@/mock/data'
 import type { DailyRevenue, CommissionRecord } from '@/mock/types'
@@ -25,14 +25,14 @@ export default function RevenueCenter() {
 
   const totalCommission = commissionRecords.reduce((s, r) => r.payoutStatus === 'paid' ? s + r.commissionAmount : s, 0)
 
-  const globalStats = useMemo(() => {
+  const globalBreakdown = useMemo(() => {
     const vol = commissionRecords.reduce((s, r) => s + (r.tradeVolume ?? 0), 0)
     const perp = commissionRecords.filter(r => r.productLine === 'perpetual').reduce((s, r) => s + r.commissionAmount, 0)
     const evt = commissionRecords.filter(r => r.productLine === 'event').reduce((s, r) => s + r.commissionAmount, 0)
     return [
       { label: '总交易额', value: vol.toFixed(2), unit: 'USDT' },
-      { label: '永续合约返佣', value: perp.toFixed(2), unit: 'USDT' },
-      { label: '事件合约返佣', value: evt.toFixed(2), unit: 'USDT' },
+      { label: '永续合约', value: perp.toFixed(2), unit: 'USDT' },
+      { label: '事件合约', value: evt.toFixed(2), unit: 'USDT' },
     ]
   }, [])
 
@@ -52,9 +52,9 @@ export default function RevenueCenter() {
     return [
       { label: '返佣金额', value: total.toFixed(2), unit: 'USDT' },
       { label: '交易额', value: vol.toFixed(2), unit: 'USDT' },
-      { label: '永续合约返佣', value: perp.toFixed(2), unit: 'USDT' },
-      { label: '事件合约返佣', value: evt.toFixed(2), unit: 'USDT' },
-      { label: '记录条数', value: filteredRecords.length },
+      { label: '永续合约', value: perp.toFixed(2), unit: 'USDT' },
+      { label: '事件合约', value: evt.toFixed(2), unit: 'USDT' },
+      { label: '记录数', value: filteredRecords.length },
     ]
   }, [filteredRecords])
 
@@ -117,21 +117,20 @@ export default function RevenueCenter() {
         </Box>
       )}
 
-      <Box border="1px solid" borderColor="border.100" borderRadius="12px" p="20px" mb="16px">
-        <Text fontSize="14px" color="gray.100" mb="4px">累计返佣（USDT）</Text>
-        <Text fontSize="28px" fontFamily="ISB" color="text.100">{totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
-        <Text fontSize="12px" color="gray.200" mt="4px">返佣实时到账</Text>
-      </Box>
-
-      <Box mb="16px">
-        <FilteredStatsPanel title="全局统计" stats={globalStats} />
-      </Box>
-
-      {hasFilter && (
-        <Box mb="16px">
-          <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsData} />
+      <Flex align="baseline" gap="32px" mb="16px" flexWrap="wrap">
+        <Box flexShrink={0}>
+          <Text fontSize="13px" color="gray.100" mb="2px">累计返佣（USDT）</Text>
+          <Text fontSize="28px" fontFamily="ISB" color="text.100" lineHeight="1.2">
+            {totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+          </Text>
+          <Text fontSize="11px" color="gray.200" mt="2px">返佣实时到账</Text>
         </Box>
-      )}
+        <Box flex={1}>
+          <InlineStatsBar stats={globalBreakdown} />
+        </Box>
+      </Flex>
+
+      {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStatsData} />}
 
       <Tabs.Root value={tab} onValueChange={e => setTab(e.value)}>
         <Tabs.List borderBottom="1px solid" borderColor="border.100" mb="16px">

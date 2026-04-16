@@ -1,10 +1,9 @@
 import { useState, useMemo } from 'react'
 import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
 import { Link } from 'react-router-dom'
-import StatCard from '@/components/shared/StatCard'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
-import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
+import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, FilterItem } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
 import { invitees, subAgents } from '@/mock/data'
@@ -12,8 +11,8 @@ import type { Invitee, SubAgent } from '@/mock/types'
 
 const globalStats = [
   { label: '注册人数', value: invitees.filter(u => !u.isSelf).length },
-  { label: '已充值人数', value: invitees.filter(u => !u.isSelf && u.depositStatus === 'deposited').length },
-  { label: '已交易人数', value: invitees.filter(u => !u.isSelf && u.tradeStatus === 'traded').length },
+  { label: '已充值', value: invitees.filter(u => !u.isSelf && u.depositStatus === 'deposited').length },
+  { label: '已交易', value: invitees.filter(u => !u.isSelf && u.tradeStatus === 'traded').length },
 ]
 
 const subAgentGlobalStats = [
@@ -64,6 +63,30 @@ export default function FriendsCenter() {
     { key: 'identity', label: '用户身份', render: r => r.isSelf ? '代理商' : r.identityType === 'sub_agent' ? '子代理' : '普通用户' },
     { key: 'deposit', label: '充值状态', render: r => <StatusBadge type="deposit" value={r.depositStatus} /> },
     { key: 'trade', label: '交易状态', render: r => <StatusBadge type="trade" value={r.tradeStatus} /> },
+    {
+      key: 'ffComm', label: 'FF 返佣',
+      render: r => r.isSelf ? '—' : r.flatFeeCommission.toFixed(2),
+      sortable: true, sortKey: r => r.flatFeeCommission,
+    },
+    {
+      key: 'psComm', label: 'PS 返佣',
+      render: r => r.isSelf ? '—' : r.profitShareCommission.toFixed(2),
+      sortable: true, sortKey: r => r.profitShareCommission,
+    },
+    {
+      key: 'evComm', label: '事件返佣',
+      render: r => r.isSelf ? '—' : r.eventCommission.toFixed(2),
+      sortable: true, sortKey: r => r.eventCommission,
+    },
+    {
+      key: 'totalComm', label: '总返佣(USDT)',
+      render: r => r.isSelf ? '—' : (
+        <Text fontFamily="ISB" color="theme">
+          {(r.flatFeeCommission + r.profitShareCommission + r.eventCommission).toFixed(2)}
+        </Text>
+      ),
+      sortable: true, sortKey: r => r.flatFeeCommission + r.profitShareCommission + r.eventCommission,
+    },
     { key: 'time', label: '注册时间', render: r => r.registeredAt },
     { key: 'remark', label: '备注', render: r => remarks[r.uid] || r.remark || '—' },
     {
@@ -90,7 +113,8 @@ export default function FriendsCenter() {
   const subAgentColumns: Column<SubAgent>[] = [
     { key: 'uid', label: 'UID', render: r => r.uid },
     { key: 'nick', label: '昵称', render: r => r.nickname },
-    { key: 'perpRate', label: '永续返佣比例', render: r => `${r.perpRate}%` },
+    { key: 'ffRate', label: 'Flat Fee 比例', render: r => `${r.flatFeeRate}%` },
+    { key: 'psRate', label: 'Profit Share 比例', render: r => `${r.profitShareRate}%` },
     { key: 'eventRate', label: '事件返佣比例', render: r => `${r.eventRate}%` },
     { key: 'time', label: '注册时间', render: r => r.registeredAt },
     {
@@ -126,9 +150,7 @@ export default function FriendsCenter() {
         </Tabs.List>
 
         <Tabs.Content value="0">
-          <Flex gap="16px" mb="16px" flexWrap="wrap">
-            {globalStats.map(s => <StatCard key={s.label} label={s.label} value={s.value} />)}
-          </Flex>
+          <InlineStatsBar stats={globalStats} />
 
           <FilterBar onSearch={() => {}} onReset={() => { setIdFilter('all') }}>
             <FilterItem label="用户身份">
@@ -139,19 +161,13 @@ export default function FriendsCenter() {
             </FilterItem>
           </FilterBar>
 
-          {hasFilter && (
-            <Box mb="16px">
-              <FilteredStatsPanel title="筛选结果统计" stats={filteredStats} />
-            </Box>
-          )}
+          {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStats} />}
 
           <DataTable data={filteredInvitees} columns={inviteeColumns} />
         </Tabs.Content>
 
         <Tabs.Content value="1">
-          <Box mb="16px">
-            <FilteredStatsPanel title="全局统计" stats={subAgentGlobalStats} />
-          </Box>
+          <InlineStatsBar stats={subAgentGlobalStats} />
           <DataTable data={subAgents} columns={subAgentColumns} />
         </Tabs.Content>
       </Tabs.Root>

@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom'
 import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
-import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
+import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, Input, FilterItem } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
 import { perpPositions, perpHistory, eventHistory } from '@/mock/data'
@@ -47,21 +47,21 @@ const allEventCols: Column<EventOrder>[] = [
 function computeStatsForTab(tab: string, positions: PerpPosition[], orders: PerpOrder[], events: EventOrder[]) {
   if (tab === '0') {
     return [
-      { label: '总持仓数', value: positions.length },
-      { label: '总持仓市值', value: positions.reduce((s, r) => s + r.quantity * r.markPrice, 0).toFixed(2), unit: 'USDT' },
-      { label: '总未实现盈亏', value: positions.reduce((s, r) => s + r.unrealizedPnl, 0).toFixed(2), unit: 'USDT' },
+      { label: '持仓数', value: positions.length },
+      { label: '持仓市值', value: positions.reduce((s, r) => s + r.quantity * r.markPrice, 0).toFixed(2), unit: 'USDT' },
+      { label: '未实现盈亏', value: positions.reduce((s, r) => s + r.unrealizedPnl, 0).toFixed(2), unit: 'USDT' },
     ]
   } else if (tab === '1') {
     return [
-      { label: '总订单数', value: orders.length },
-      { label: '总交易量', value: orders.reduce((s, r) => s + r.price * r.quantity, 0).toFixed(2), unit: 'USDT' },
-      { label: '总手续费', value: orders.reduce((s, r) => s + r.fee, 0).toFixed(2), unit: 'USDT' },
+      { label: '订单数', value: orders.length },
+      { label: '交易量', value: orders.reduce((s, r) => s + r.price * r.quantity, 0).toFixed(2), unit: 'USDT' },
+      { label: '手续费', value: orders.reduce((s, r) => s + r.fee, 0).toFixed(2), unit: 'USDT' },
     ]
   } else {
     return [
-      { label: '总订单数', value: events.length },
-      { label: '总下注额', value: events.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
-      { label: '总盈亏', value: events.reduce((s, r) => s + r.pnl, 0).toFixed(2), unit: 'USDT' },
+      { label: '订单数', value: events.length },
+      { label: '下注额', value: events.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+      { label: '盈亏', value: events.reduce((s, r) => s + r.pnl, 0).toFixed(2), unit: 'USDT' },
     ]
   }
 }
@@ -199,15 +199,8 @@ export default function TradingCenter() {
               )}
             </FilterBar>
 
-            <Box mb="16px">
-              <FilteredStatsPanel title="全局统计" stats={globalStatsForTab} />
-            </Box>
-
-            {hasFilter && (
-              <Box mb="16px">
-                <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsForTab} />
-              </Box>
-            )}
+            <InlineStatsBar stats={globalStatsForTab} />
+            {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStatsForTab} />}
 
             <Tabs.Content value="0">
               {tab === '0' && <DataTable data={filteredPerpPos} columns={allPerpPosCols.filter(c => !hiddenCols.has(c.key))} />}
