@@ -7,6 +7,7 @@ export type PayoutStatus = 'paid' | 'frozen_pending'
 export type SourceType = 'direct' | 'platform_reward'
 export type IdentityType = 'regular' | 'sub_agent'
 export type DepositStatus = 'deposited' | 'not_deposited'
+export type TradeStatus = 'traded' | 'not_traded'
 export type TransferType = 'deposit' | 'withdrawal'
 export type TransferSubType = 'normal' | 'internal_transfer'
 export type TransferStatus = 'processing' | 'success' | 'failed'
@@ -33,6 +34,7 @@ export interface Invitee {
   uid: string
   identityType: IdentityType
   depositStatus: DepositStatus
+  tradeStatus: TradeStatus
   registeredAt: string
   remark: string
   isSelf?: boolean

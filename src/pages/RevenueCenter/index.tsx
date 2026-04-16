@@ -21,7 +21,20 @@ export default function RevenueCenter() {
   const settlementDisabled = productLine === 'event'
   const effectiveSettlement = settlementDisabled ? 'all' : settlement
 
+  const hasFilter = productLine !== 'all' || effectiveSettlement !== 'all' || dateFrom !== '' || dateTo !== '' || preSourceUid !== ''
+
   const totalCommission = commissionRecords.reduce((s, r) => r.payoutStatus === 'paid' ? s + r.commissionAmount : s, 0)
+
+  const globalStats = useMemo(() => {
+    const vol = commissionRecords.reduce((s, r) => s + (r.tradeVolume ?? 0), 0)
+    const perp = commissionRecords.filter(r => r.productLine === 'perpetual').reduce((s, r) => s + r.commissionAmount, 0)
+    const evt = commissionRecords.filter(r => r.productLine === 'event').reduce((s, r) => s + r.commissionAmount, 0)
+    return [
+      { label: '总交易额', value: vol.toFixed(2), unit: 'USDT' },
+      { label: '永续合约返佣', value: perp.toFixed(2), unit: 'USDT' },
+      { label: '事件合约返佣', value: evt.toFixed(2), unit: 'USDT' },
+    ]
+  }, [])
 
   const filteredRecords = useMemo(() => {
     let data = commissionRecords
@@ -31,17 +44,17 @@ export default function RevenueCenter() {
     return data
   }, [productLine, effectiveSettlement, preSourceUid])
 
-  const filteredStats = useMemo(() => {
+  const filteredStatsData = useMemo(() => {
     const total = filteredRecords.reduce((s, r) => s + r.commissionAmount, 0)
     const vol = filteredRecords.reduce((s, r) => s + (r.tradeVolume ?? 0), 0)
     const perp = filteredRecords.filter(r => r.productLine === 'perpetual').reduce((s, r) => s + r.commissionAmount, 0)
     const evt = filteredRecords.filter(r => r.productLine === 'event').reduce((s, r) => s + r.commissionAmount, 0)
     return [
-      { label: '总返佣金额', value: total.toFixed(2), unit: 'USDT' },
-      { label: '总交易额', value: vol.toFixed(2), unit: 'USDT' },
-      { label: '记录条数', value: filteredRecords.length },
+      { label: '返佣金额', value: total.toFixed(2), unit: 'USDT' },
+      { label: '交易额', value: vol.toFixed(2), unit: 'USDT' },
       { label: '永续合约返佣', value: perp.toFixed(2), unit: 'USDT' },
       { label: '事件合约返佣', value: evt.toFixed(2), unit: 'USDT' },
+      { label: '记录条数', value: filteredRecords.length },
     ]
   }, [filteredRecords])
 
@@ -105,15 +118,21 @@ export default function RevenueCenter() {
         </Box>
       )}
 
-      <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius={{ base: '0', md: 'xl' }} p={5} mb={4}>
+      <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={5} mb={4}>
         <Text fontSize="xs" color="gray.100" mb={1}>累计返佣（USDT）</Text>
         <Text fontSize="2xl" fontFamily="ISB" color="text.100">{totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
         <Text fontSize="xs" color="gray.200" mt={1}>返佣实时到账</Text>
       </Box>
 
-      <Box mb={6}>
-        <FilteredStatsPanel title="数据统计" stats={filteredStats} />
+      <Box mb={4}>
+        <FilteredStatsPanel title="全局统计" stats={globalStats} />
       </Box>
+
+      {hasFilter && (
+        <Box mb={4}>
+          <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsData} />
+        </Box>
+      )}
 
       <Tabs.Root value={tab} onValueChange={e => setTab(e.value)}>
         <Tabs.List borderBottom="1px solid" borderColor="border.100" mb={4}>
@@ -132,7 +151,7 @@ export default function RevenueCenter() {
           <DataTable data={filteredRecords} columns={recordColumns} />
         </Tabs.Content>
         <Tabs.Content value="2">
-          <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius={{ base: '0', md: 'xl' }} p={5}>
+          <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={5}>
             <Text fontFamily="ISB" mb={4}>当前结算方式配置</Text>
             <Flex gap={8}>
               <Box><Text fontSize="xs" color="gray.100">结算方式</Text><Text fontSize="sm" mt={1}>{settlementConfig.method}</Text></Box>

@@ -18,7 +18,7 @@ export default function StatCard({ label, value, unit, changePercent }: StatCard
       bg="bg.200"
       border="1px solid"
       borderColor="border.100"
-      borderRadius={{ base: '0', md: 'xl' }}
+      borderRadius="xl"
       p={5}
       flex={1}
       minW="180px"

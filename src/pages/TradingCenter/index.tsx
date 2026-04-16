@@ -44,6 +44,28 @@ const allEventCols: Column<EventOrder>[] = [
   { key: 'time', label: '投注时间', render: r => r.time },
 ]
 
+function computeStatsForTab(tab: string, positions: PerpPosition[], orders: PerpOrder[], events: EventOrder[]) {
+  if (tab === '0') {
+    return [
+      { label: '总持仓数', value: positions.length },
+      { label: '总持仓市值', value: positions.reduce((s, r) => s + r.quantity * r.markPrice, 0).toFixed(2), unit: 'USDT' },
+      { label: '总未实现盈亏', value: positions.reduce((s, r) => s + r.unrealizedPnl, 0).toFixed(2), unit: 'USDT' },
+    ]
+  } else if (tab === '1') {
+    return [
+      { label: '总订单数', value: orders.length },
+      { label: '总交易量', value: orders.reduce((s, r) => s + r.price * r.quantity, 0).toFixed(2), unit: 'USDT' },
+      { label: '总手续费', value: orders.reduce((s, r) => s + r.fee, 0).toFixed(2), unit: 'USDT' },
+    ]
+  } else {
+    return [
+      { label: '总订单数', value: events.length },
+      { label: '总下注额', value: events.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+      { label: '总盈亏', value: events.reduce((s, r) => s + r.pnl, 0).toFixed(2), unit: 'USDT' },
+    ]
+  }
+}
+
 export default function TradingCenter() {
   const { tradeVisibility } = useAgent()
   const [tab, setTab] = useState('0')
@@ -61,6 +83,8 @@ export default function TradingCenter() {
   const isSummary = tradeVisibility === 'summary'
   const currentCols = tab === '0' ? allPerpPosCols : tab === '1' ? allPerpHistCols : allEventCols
 
+  const hasFilter = uid !== '' || remark !== '' || code !== '' || direction !== 'all' || pair !== 'all' || subType !== 'all'
+
   const filterFn = <T extends { uid: string; remark: string }>(list: T[]) => {
     let res = list
     if (uid) res = res.filter(r => r.uid.includes(uid))
@@ -72,30 +96,13 @@ export default function TradingCenter() {
   const filteredPerpHist = useMemo(() => filterFn(perpHistory), [uid, remark])
   const filteredEvent = useMemo(() => filterFn(eventHistory), [uid, remark])
 
-  const statsForTab = useMemo(() => {
-    if (tab === '0') {
-      const data = filteredPerpPos
-      return [
-        { label: '总持仓数', value: data.length },
-        { label: '总数量', value: +data.reduce((s, r) => s + r.quantity, 0).toFixed(4) },
-        { label: '总未实现盈亏', value: data.reduce((s, r) => s + r.unrealizedPnl, 0).toFixed(2), unit: 'USDT' },
-      ]
-    } else if (tab === '1') {
-      const data = filteredPerpHist
-      return [
-        { label: '总订单数', value: data.length },
-        { label: '总交易量', value: data.reduce((s, r) => s + r.price * r.quantity, 0).toFixed(2), unit: 'USDT' },
-        { label: '总手续费', value: data.reduce((s, r) => s + r.fee, 0).toFixed(2), unit: 'USDT' },
-      ]
-    } else {
-      const data = filteredEvent
-      return [
-        { label: '总订单数', value: data.length },
-        { label: '总下注额', value: data.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
-        { label: '总盈亏', value: data.reduce((s, r) => s + r.pnl, 0).toFixed(2), unit: 'USDT' },
-      ]
-    }
-  }, [tab, filteredPerpPos, filteredPerpHist, filteredEvent])
+  const globalStatsForTab = useMemo(() =>
+    computeStatsForTab(tab, perpPositions, perpHistory, eventHistory),
+  [tab])
+
+  const filteredStatsForTab = useMemo(() =>
+    computeStatsForTab(tab, filteredPerpPos, filteredPerpHist, filteredEvent),
+  [tab, filteredPerpPos, filteredPerpHist, filteredEvent])
 
   const tabTrigger = (val: string, label: string) => (
     <Tabs.Trigger value={val} px={4} py={3} fontSize="sm"
@@ -108,7 +115,7 @@ export default function TradingCenter() {
   )
 
   const summaryView = (
-    <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius={{ base: '0', md: 'xl' }} p={5}>
+    <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="xl" p={5}>
       <Text fontFamily="ISB" mb={3}>汇总数据</Text>
       <Flex gap={8}>
         <Box><Text fontSize="xs" color="gray.100">交易笔数</Text><Text fontSize="xl" fontFamily="ISB">{perpPositions.length + perpHistory.length + eventHistory.length}</Text></Box>
@@ -187,8 +194,14 @@ export default function TradingCenter() {
             </FilterBar>
 
             <Box mb={4}>
-              <FilteredStatsPanel title="数据统计" stats={statsForTab} />
+              <FilteredStatsPanel title="全局统计" stats={globalStatsForTab} />
             </Box>
+
+            {hasFilter && (
+              <Box mb={4}>
+                <FilteredStatsPanel title="筛选结果统计" stats={filteredStatsForTab} />
+              </Box>
+            )}
 
             <Tabs.Content value="0">
               {tab === '0' && <DataTable data={filteredPerpPos} columns={allPerpPosCols.filter(c => !hiddenCols.has(c.key))} />}

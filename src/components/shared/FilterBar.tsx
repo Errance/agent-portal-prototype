@@ -97,8 +97,8 @@ export function FilterBar({ children, onSearch, onReset }: {
       bg="bg.200"
       border="1px solid"
       borderColor="border.100"
-      borderRadius={{ base: '0', md: 'xl' }}
-      p={{ base: 3, md: 5 }}
+      borderRadius="xl"
+      p={5}
       mb={4}
     >
       <Flex gap={4} flexWrap="wrap" align="flex-end">

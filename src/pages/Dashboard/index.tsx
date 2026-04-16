@@ -26,7 +26,7 @@ export default function Dashboard() {
       <Flex
         align="center" justify="space-between" mb={4}
         bg="bg.200" border="1px solid" borderColor="border.100"
-        borderRadius={{ base: '0', md: 'xl' }} px={5} py={4}
+        borderRadius="xl" px={5} py={4}
       >
         <Text fontSize="xl" fontFamily="ISB" color="text.100">
           您好，{agentName}
@@ -51,7 +51,7 @@ export default function Dashboard() {
           bg="green.200"
           border="1px solid"
           borderColor="theme"
-          borderRadius={{ base: '0', md: 'xl' }}
+          borderRadius="xl"
           p={5}
           mb={6}
         >
@@ -102,10 +102,10 @@ export default function Dashboard() {
         bg="bg.200"
         border="1px solid"
         borderColor="border.100"
-        borderRadius={{ base: '0', md: 'xl' }}
-        p={{ base: 0, md: 5 }}
+        borderRadius="xl"
+        p={5}
       >
-        <Flex justify="space-between" align="center" mb={4} px={{ base: 3, md: 0 }} pt={{ base: 3, md: 0 }}>
+        <Flex justify="space-between" align="center" mb={4}>
           <Text fontFamily="ISB" fontSize="md" color="text.100">邀请链接</Text>
           <Link to="/invite">
             <Box

@@ -1,5 +1,5 @@
 import { Box } from '@chakra-ui/react'
-import type { PayoutStatus, TransferStatus, DepositStatus, EventResult } from '@/mock/types'
+import type { PayoutStatus, TransferStatus, DepositStatus, TradeStatus, EventResult } from '@/mock/types'
 
 const payoutMap: Record<PayoutStatus, { label: string; color: string; bg: string }> = {
   paid: { label: '已发放', color: '#0ABAB5', bg: 'rgba(10,186,181,0.1)' },
@@ -17,13 +17,18 @@ const depositMap: Record<DepositStatus, { label: string; color: string; bg: stri
   not_deposited: { label: '未充值', color: '#777E90', bg: 'rgba(119,126,144,0.1)' },
 }
 
+const tradeMap: Record<TradeStatus, { label: string; color: string; bg: string }> = {
+  traded: { label: '已交易', color: '#0ABAB5', bg: 'rgba(10,186,181,0.1)' },
+  not_traded: { label: '未交易', color: '#777E90', bg: 'rgba(119,126,144,0.1)' },
+}
+
 const eventResultMap: Record<EventResult, { label: string; color: string; bg: string }> = {
   win: { label: '胜', color: '#0ABAB5', bg: 'rgba(10,186,181,0.1)' },
   lose: { label: '负', color: '#FF4949', bg: 'rgba(255,73,73,0.08)' },
   pending: { label: '待结算', color: '#E5A000', bg: 'rgba(229,160,0,0.1)' },
 }
 
-type BadgeType = 'payout' | 'transfer' | 'deposit' | 'eventResult'
+type BadgeType = 'payout' | 'transfer' | 'deposit' | 'trade' | 'eventResult'
 
 export default function StatusBadge({ type, value }: { type: BadgeType; value: string }) {
   let info: { label: string; color: string; bg: string } | undefined
@@ -32,6 +37,7 @@ export default function StatusBadge({ type, value }: { type: BadgeType; value: s
     case 'payout': info = payoutMap[value as PayoutStatus]; break
     case 'transfer': info = transferMap[value as TransferStatus]; break
     case 'deposit': info = depositMap[value as DepositStatus]; break
+    case 'trade': info = tradeMap[value as TradeStatus]; break
     case 'eventResult': info = eventResultMap[value as EventResult]; break
   }
 

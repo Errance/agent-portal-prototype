@@ -56,7 +56,7 @@ export default function DataTable<T>({
       <Box
         overflowX="auto"
         maxH={maxH}
-        borderRadius={{ base: '0', md: 'md' }}
+        borderRadius="md"
       >
         <Table.Root size="sm" variant="line" stickyHeader>
           <Table.Header>

@@ -22,7 +22,7 @@ export default function FilteredStatsPanel({ title, stats }: FilteredStatsPanelP
       bg="bg.200"
       border="1px solid"
       borderColor="border.100"
-      borderRadius={{ base: '0', md: 'xl' }}
+      borderRadius="xl"
       p={4}
     >
       <Text fontSize="xs" color="gray.200" mb={3} fontWeight="600">{title}</Text>

@@ -51,18 +51,23 @@ export const invitees: Invitee[] = [
     uid: 'SELF',
     identityType: 'sub_agent',
     depositStatus: 'deposited',
+    tradeStatus: 'traded',
     registeredAt: '2025-01-15 10:30:00',
     remark: '我自己',
     isSelf: true,
     selfRebateAmount: 245.60,
   },
-  ...Array.from({ length: 50 }, (_, i) => ({
-    uid: uid(i),
-    identityType: pick(['regular', 'sub_agent'] as const),
-    depositStatus: pick(['deposited', 'not_deposited'] as const),
-    registeredAt: date(Math.floor(Math.random() * 90)),
-    remark: i % 5 === 0 ? `备注${i}` : '',
-  })),
+  ...Array.from({ length: 50 }, (_, i) => {
+    const dep = pick(['deposited', 'not_deposited'] as const)
+    return {
+      uid: uid(i),
+      identityType: pick(['regular', 'sub_agent'] as const),
+      depositStatus: dep,
+      tradeStatus: (dep === 'deposited' && Math.random() > 0.3 ? 'traded' : 'not_traded') as const,
+      registeredAt: date(Math.floor(Math.random() * 90)),
+      remark: i % 5 === 0 ? `备注${i}` : '',
+    }
+  }),
 ]
 
 // ─── Sub-Agents (PRD 5.2.2) ───

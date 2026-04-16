@@ -1,18 +1,24 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
 import { Link } from 'react-router-dom'
 import StatCard from '@/components/shared/StatCard'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
+import FilteredStatsPanel from '@/components/shared/FilteredStatsPanel'
 import { FilterBar, Select, FilterItem } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
 import { invitees, subAgents } from '@/mock/data'
 import type { Invitee, SubAgent } from '@/mock/types'
 
-const stats = [
-  { label: '注册人数', value: invitees.length - 1 },
+const globalStats = [
+  { label: '注册人数', value: invitees.filter(u => !u.isSelf).length },
   { label: '已充值人数', value: invitees.filter(u => !u.isSelf && u.depositStatus === 'deposited').length },
-  { label: '已交易人数', value: invitees.filter(u => !u.isSelf && u.depositStatus === 'deposited').length },
+  { label: '已交易人数', value: invitees.filter(u => !u.isSelf && u.tradeStatus === 'traded').length },
+]
+
+const subAgentGlobalStats = [
+  { label: '子代理总数', value: subAgents.length, unit: '人' },
+  { label: '累计贡献返佣', value: subAgents.reduce((s, a) => s + a.totalDirectCommission, 0).toFixed(2), unit: 'USDT' },
 ]
 
 export default function FriendsCenter() {
@@ -23,12 +29,23 @@ export default function FriendsCenter() {
   const [editVal, setEditVal] = useState('')
   const [remarks, setRemarks] = useState<Record<string, string>>({})
 
+  const hasFilter = idFilter !== 'all'
+
   const filteredInvitees = invitees.filter(u => {
     if (!selfRebateEnabled && u.isSelf) return false
     if (idFilter === 'regular' && u.identityType !== 'regular') return false
     if (idFilter === 'sub_agent' && u.identityType !== 'sub_agent' && !u.isSelf) return false
     return true
   })
+
+  const filteredStats = useMemo(() => {
+    const nonSelf = filteredInvitees.filter(u => !u.isSelf)
+    return [
+      { label: '人数', value: nonSelf.length, unit: '人' },
+      { label: '已充值', value: nonSelf.filter(u => u.depositStatus === 'deposited').length, unit: '人' },
+      { label: '已交易', value: nonSelf.filter(u => u.tradeStatus === 'traded').length, unit: '人' },
+    ]
+  }, [filteredInvitees])
 
   const inviteeColumns: Column<Invitee>[] = [
     {
@@ -46,6 +63,7 @@ export default function FriendsCenter() {
     },
     { key: 'identity', label: '用户身份', render: r => r.isSelf ? '代理商' : r.identityType === 'sub_agent' ? '子代理' : '普通用户' },
     { key: 'deposit', label: '充值状态', render: r => <StatusBadge type="deposit" value={r.depositStatus} /> },
+    { key: 'trade', label: '交易状态', render: r => <StatusBadge type="trade" value={r.tradeStatus} /> },
     { key: 'time', label: '注册时间', render: r => r.registeredAt },
     { key: 'remark', label: '备注', render: r => remarks[r.uid] || r.remark || '—' },
     {
@@ -108,7 +126,7 @@ export default function FriendsCenter() {
 
         <Tabs.Content value="0">
           <Flex gap={4} mb={4} flexWrap="wrap">
-            {stats.map(s => <StatCard key={s.label} label={s.label} value={s.value} />)}
+            {globalStats.map(s => <StatCard key={s.label} label={s.label} value={s.value} />)}
           </Flex>
 
           <FilterBar onSearch={() => {}} onReset={() => { setIdFilter('all') }}>
@@ -120,10 +138,19 @@ export default function FriendsCenter() {
             </FilterItem>
           </FilterBar>
 
+          {hasFilter && (
+            <Box mb={4}>
+              <FilteredStatsPanel title="筛选结果统计" stats={filteredStats} />
+            </Box>
+          )}
+
           <DataTable data={filteredInvitees} columns={inviteeColumns} />
         </Tabs.Content>
 
         <Tabs.Content value="1">
+          <Box mb={4}>
+            <FilteredStatsPanel title="全局统计" stats={subAgentGlobalStats} />
+          </Box>
           <DataTable data={subAgents} columns={subAgentColumns} />
         </Tabs.Content>
       </Tabs.Root>
