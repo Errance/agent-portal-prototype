@@ -137,7 +137,7 @@ export default function InvitePromotion() {
 
       <FilterBar onSearch={() => {}} onReset={() => { setFCode(''); setDateFrom(''); setDateTo('') }}>
         <FilterItem label="邀请码"><Input value={fCode} onChange={setFCode} placeholder="精确搜索" /></FilterItem>
-        <FilterItem label="统计时间">
+        <FilterItem label="统计时间" wide>
           <DateRangeInput from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </FilterItem>
       </FilterBar>

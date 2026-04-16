@@ -141,23 +141,26 @@ export default function TradingCenter() {
               onClick={() => setShowColPicker(!showColPicker)}
               _hover={{ bg: 'bg.100' }}>自定义列</Box>
             {showColPicker && (
-              <Box position="absolute" right={0} top="100%" mt="4px" bg="bg.200" border="1px solid"
-                borderColor="border.100" borderRadius="12px" p="12px" zIndex={50} minW="180px"
-                boxShadow="0 4px 16px rgba(0,0,0,0.08)">
-                {currentCols.map(col => (
-                  <Flex key={col.key} align="center" gap="8px" py="4px" cursor="pointer"
-                    onClick={() => setHiddenCols(prev => {
-                      const next = new Set(prev)
-                      next.has(col.key) ? next.delete(col.key) : next.add(col.key)
-                      return next
-                    })}>
-                    <Box w="16px" h="16px" borderRadius="4px" border="1px solid"
-                      borderColor={hiddenCols.has(col.key) ? 'border.100' : 'theme'}
-                      bg={hiddenCols.has(col.key) ? 'transparent' : 'theme'} />
-                    <Text fontSize="14px" color="text.100">{typeof col.label === 'string' ? col.label : col.key}</Text>
-                  </Flex>
-                ))}
-              </Box>
+              <>
+                <Box position="fixed" inset={0} zIndex={49} onClick={() => setShowColPicker(false)} />
+                <Box position="absolute" right={0} top="100%" mt="4px" bg="bg.200" border="1px solid"
+                  borderColor="border.100" borderRadius="10px" p="12px" zIndex={50} minW="180px"
+                  boxShadow="0 4px 16px rgba(0,0,0,0.08)">
+                  {currentCols.map(col => (
+                    <Flex key={col.key} align="center" gap="8px" py="4px" cursor="pointer"
+                      onClick={() => setHiddenCols(prev => {
+                        const next = new Set(prev)
+                        next.has(col.key) ? next.delete(col.key) : next.add(col.key)
+                        return next
+                      })}>
+                      <Box w="16px" h="16px" borderRadius="4px" border="1px solid"
+                        borderColor={hiddenCols.has(col.key) ? 'border.100' : 'theme'}
+                        bg={hiddenCols.has(col.key) ? 'transparent' : 'theme'} />
+                      <Text fontSize="13px" color="text.100">{typeof col.label === 'string' ? col.label : col.key}</Text>
+                    </Flex>
+                  ))}
+                </Box>
+              </>
             )}
           </Box>
         )}

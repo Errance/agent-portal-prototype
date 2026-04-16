@@ -77,7 +77,7 @@ export default function OnchainTransfers() {
             { label: '全部', value: 'all' }, { label: '普通', value: 'normal' }, { label: '内部转账', value: 'internal_transfer' },
           ]} />
         </FilterItem>
-        <FilterItem label="统计时间">
+        <FilterItem label="统计时间" wide>
           <DateRangeInput from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </FilterItem>
         <FilterItem label="用户等级">

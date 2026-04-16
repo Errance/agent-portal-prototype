@@ -106,7 +106,7 @@ export default function RevenueCenter() {
             { label: '全部', value: 'all' }, { label: 'Flat Fee', value: 'flat_fee' }, { label: 'Profit Share', value: 'profit_share' },
           ]} />
         </FilterItem>
-        <FilterItem label="统计时间">
+        <FilterItem label="统计时间" wide>
           <DateRangeInput from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
         </FilterItem>
       </FilterBar>

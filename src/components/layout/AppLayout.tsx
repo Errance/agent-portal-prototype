@@ -28,7 +28,7 @@ export default function AppLayout() {
 
   return (
     <Flex minH="100vh" flexDir="column" bg="bg.100">
-      <Box as="header" bg="bg.200" w="100%" h="72px" flexShrink={0}>
+      <Box as="header" bg="bg.200" w="100%" h="72px" flexShrink={0} position="sticky" top={0} zIndex={100} borderBottom="1px solid" borderColor="border.100">
         <Flex h="100%" align="center" px="40px" maxW="100%">
           <Text
             fontFamily="ISB"
@@ -82,7 +82,7 @@ export default function AppLayout() {
         mx="auto"
         px="120px"
         pt="24px"
-        pb={4}
+        pb="120px"
         flex={1}
       >
         <Outlet />

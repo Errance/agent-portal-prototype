@@ -53,7 +53,7 @@ export default function DataTable<T>({
 
   return (
     <Box>
-      <Box overflowX="auto" maxH={maxH}>
+      <Box overflowX="auto" maxH={maxH} position="relative" zIndex={0}>
         <Table.Root size="sm" variant="line" stickyHeader>
           <Table.Header>
             <Table.Row>
