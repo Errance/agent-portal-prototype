@@ -48,12 +48,39 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
    * 不会永久卡在"正在打开..."。
    */
   const [openingModal, setOpeningModal] = useState(false)
+  /**
+   * 2 秒 "正在打开登录窗口..." 过渡 timer 用 ref 托管。
+   *
+   * 关键：**不**能把 clearTimeout 放 effect 的 cleanup 里。
+   *
+   * 这个 effect 依赖 `[auth.isLoading, auth.isAuthenticated, auth]`，
+   * 其中 `auth` 是 `useAuth()` 返回的 context value。PrivyAuthBridge 里的
+   * `value` memo 依赖 `user` / `login` / `logout` / `getAccessToken` 等会
+   * 随 Privy 内部 hydrate 变化的子状态，所以 `auth` ref 会在短时间内多次
+   * 变化，effect 反复 re-run。
+   *
+   * 如果把 `clearTimeout` 放在 effect cleanup 返回值里，timer 会在 6ms 内
+   * 就被 clean 掉；而下一次 effect run 因 `autoLoginFiredRef.current=true`
+   * 走 early-return，**既不** schedule 新 timer、**也不** reset
+   * `openingModal`——`openingModal` 永久卡 true（实测调试日志 H1 确认）。
+   *
+   * 所以 timer 改用 ref 托管：
+   * - schedule 前先 clearTimeout（防御）
+   * - timer 自己 fire 时置 null
+   * - `auth.isAuthenticated=true` 分支主动清（登录成功）
+   * - 专门一个 unmount-only useEffect 在组件销毁时清
+   */
+  const openingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (auth.isLoading) return
     if (auth.isAuthenticated) {
       // 认证过就永远不再 auto-trigger（防止 logout 被秒 re-login）
       autoLoginFiredRef.current = true
+      if (openingTimerRef.current) {
+        clearTimeout(openingTimerRef.current)
+        openingTimerRef.current = null
+      }
       setOpeningModal(false)
       return
     }
@@ -61,9 +88,24 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
     autoLoginFiredRef.current = true
     setOpeningModal(true)
     void auth.login()
-    const timer = setTimeout(() => setOpeningModal(false), 2000)
-    return () => clearTimeout(timer)
+    if (openingTimerRef.current) clearTimeout(openingTimerRef.current)
+    openingTimerRef.current = setTimeout(() => {
+      openingTimerRef.current = null
+      setOpeningModal(false)
+    }, 2000)
+    // 刻意**不**返回 cleanup：timer 生命周期由 ref 托管，不受 effect re-run 影响。
   }, [auth.isLoading, auth.isAuthenticated, auth])
+
+  // 组件 unmount 时才真的清 timer（RequireAuth 通常整个应用生命周期都在，
+  // 这个主要是 StrictMode / HMR 下的防御）。
+  useEffect(() => {
+    return () => {
+      if (openingTimerRef.current) {
+        clearTimeout(openingTimerRef.current)
+        openingTimerRef.current = null
+      }
+    }
+  }, [])
 
   if (auth.isLoading) {
     return (
