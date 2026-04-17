@@ -23,6 +23,20 @@
       ::-webkit-scrollbar-track { background: #F4F5F7; border-radius: 3px; }
       ::-webkit-scrollbar-thumb { background: #DEDFE0; border-radius: 3px; }
       ::-webkit-scrollbar-thumb:hover { background: #8E8E92; }
+      /*
+        Privy modal 非可关闭化：
+        我们希望"未登录用户永远看不到业务 UI"（参见 RequireAuth + privy.tsx
+        对 exited_auth_flow 的 re-open 策略）。视觉层面隐藏掉 Privy modal
+        右上角的 ✕ 按钮，避免用户先看到"关闭提示"再被我们强行弹回——体验
+        上直接就是一个不可关闭的登录窗。
+        选择器两层都稳定：
+          - #privy-dialog：Privy modal 根节点的固定 id
+          - [aria-label="close modal"]：关闭按钮的语义 attribute
+            （避开了 sc-xxx 这种 styled-components 自动生成的哈希类名）
+        若未来 Privy SDK 改了上面任一属性，这条规则只会"失效"而不会崩，
+        兜底仍有 privy.tsx 里的 queueMicrotask re-open 机制。
+      */
+      #privy-dialog button[aria-label="close modal"] { display: none !important; }
     </style>
   </head>
   <body>
