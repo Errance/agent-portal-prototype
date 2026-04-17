@@ -24,10 +24,17 @@ export const API_BASE =
   import.meta.env.VITE_API_BASE || 'https://surfv2-sit-api.nfexinsider.com'
 
 /**
- * 业务平台标识头 `biz-pf`。主站 surf-one 用 '4'；代理后台值以后端告知为准。
- * 未注入时 fallback 到 '4'（跟主站一致），上线前需后端确认。
+ * 业务平台标识头 `biz-pf`。后端 `GetPlatformByValue` 枚举：
+ *   1 = MGT
+ *   2 = CLIENT
+ *   3 = BOT
+ *   4 = SURFV2_CEX_TRADE      # surf-one 主站交易
+ *   5 = SURFV2_CEX_REBATE
+ *   6 = SURFV2_DEX_TRADE      # agent-portal 暂试这个（开发建议）
+ *   7 = SURFV2_DEX_REBATE
+ * 后端会用这个值查 ThirdPartyAppInfo 表找期待的 Privy App ID。
  */
-export const BIZ_PF = import.meta.env.VITE_BIZ_PF || '4'
+export const BIZ_PF = import.meta.env.VITE_BIZ_PF || '6'
 
 /** mock 接口模拟延迟（ms），制造 loading 状态。 */
 export const MOCK_LATENCY_MS = 300
