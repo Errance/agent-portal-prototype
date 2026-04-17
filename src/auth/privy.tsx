@@ -368,9 +368,22 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
     clear()
     await resetPrivySession()
     queryClient.clear()
+    // Hard reload：
+    // Privy 的 `/sessions/logout` 在 dev / 部分环境会 CORS 400，导致 SDK
+    // 内存状态 `privy.authenticated` 残留 true——这时 `privy.login()` 会
+    // 判定"已登录"、不弹 modal，`openLoginModal` 的 early-return 也无济于事。
+    // 强制 reload 是最可靠的兜底：localStorage 的 `privy:*` / `tf.agent.*`
+    // 已清，页面重新加载时 Privy SDK 从空状态自举、RequireAuth 走初次 mount
+    // 分支自动弹 modal。UX 上只是一个 < 500ms 的过渡闪屏。
+    if (typeof window !== 'undefined') {
+      // 稍后一帧让 state / queryClient 清理先 flush，避免"闪 dashboard 再 reload"
+      setTimeout(() => window.location.reload(), 10)
+    }
   }, [clear, resetPrivySession, queryClient])
 
   // 填充 retryRef（toast action 要用）。useEffect 避免渲染时直接赋值。
+  // 注意：logout 会 reload 页面，所以 retryRef 里的 login() 实际上不会执行；
+  // 但保留这个调用序列语义，万一以后把 reload 去掉时行为仍然正确。
   useEffect(() => {
     retryRef.current = async () => {
       await logout()
