@@ -1,10 +1,23 @@
-import { API_BASE } from './config'
+import { API_BASE, BIZ_PF } from './config'
 
-/** 主站 web/ 风格的统一响应包。 */
+/**
+ * 主站风格的统一响应包。
+ *
+ * 注意：`errno` 在后端实现里**是字符串**（如 `'200'` 成功、`'104'` token 失效、
+ * `'10010012'` 不在白名单）。历史 mock 用数字 0，`isApiSuccess` 做兼容判断。
+ */
 export interface ApiResponse<T> {
-  errno: number
+  errno: string | number
   msg?: string
   data: T
+}
+
+/** token 失效错误码（主站 surf-one 使用，代理后台待后端确认） */
+const ERRNO_TOKEN_INVALID = '104'
+
+function isApiSuccess(errno: unknown): boolean {
+  // mock 用数字 0；真实后端用字符串 '200'；都算成功
+  return errno === 0 || errno === '0' || errno === '200'
 }
 
 /**
@@ -21,7 +34,7 @@ export function setAccessTokenGetter(getter: TokenGetter | null) {
 
 export class ApiError extends Error {
   constructor(
-    public errno: number,
+    public errno: string | number,
     message: string,
     public raw?: unknown,
   ) {
@@ -61,12 +74,20 @@ export interface RequestOptions extends Omit<RequestInit, 'body' | 'signal'> {
   signal?: AbortSignal
 }
 
+/** 派发 401/Token 失效事件。AuthProvider 订阅并触发登出。 */
+function emitUnauthorized() {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('api:unauthorized'))
+  }
+}
+
 /**
  * 真实 fetch 封装（mock 开启时不会被调用）。统一：
  * - 拼 API_BASE
  * - JSON 化 body
- * - 解包 ApiResponse<T>，errno !== 0 抛 ApiError
- * - 401 以自定义事件广播，交给外层跳登录（避免硬耦合路由）
+ * - 注入 Authorization / biz-pf / LANG 等主站风格 header
+ * - 解包 `ApiResponse<T>`，`isApiSuccess` 失败抛 `ApiError`
+ * - HTTP 401 或 `errno === '104'` 都触发 `api:unauthorized` 事件
  */
 export async function apiFetch<T = unknown>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { body, headers, method = 'GET', ...rest } = opts
@@ -89,6 +110,8 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestOptions =
     ...rest,
     headers: {
       'Content-Type': 'application/json',
+      'biz-pf': BIZ_PF,
+      LANG: 'zh-cn',
       ...authHeader,
       ...(headers as Record<string, string>),
     },
@@ -96,9 +119,7 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestOptions =
   })
 
   if (res.status === 401) {
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('api:unauthorized'))
-    }
+    emitUnauthorized()
     throw new ApiError(401, '未登录或会话已过期')
   }
 
@@ -109,8 +130,10 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestOptions =
     throw new ApiError(res.status, `响应解析失败 (${res.status})`)
   }
 
-  if (json.errno !== 0) {
-    throw new ApiError(json.errno, json.msg || '请求失败', json)
+  if (!isApiSuccess(json.errno)) {
+    // 主站错误码 '104' = token 失效（与 HTTP 401 等价处理）
+    if (String(json.errno) === ERRNO_TOKEN_INVALID) emitUnauthorized()
+    throw new ApiError(json.errno, json.msg || `请求失败 (errno=${json.errno})`, json)
   }
   return json.data
 }

@@ -12,7 +12,22 @@
 const mockEnv = import.meta.env.VITE_USE_MOCK
 export const USE_MOCK =
   mockEnv === undefined ? Boolean(import.meta.env.DEV) : String(mockEnv) === 'true'
-export const API_BASE = import.meta.env.VITE_API_BASE || '/api'
+
+/**
+ * 真实 API 基址。sit 默认 `https://surfv2-sit-api.nfexinsider.com`，
+ * 由 [AGENT_PORTAL_FRONTEND_API.md §1.1](../../docs/AGENT_PORTAL_FRONTEND_API.md) 确认。
+ *
+ * 注意：`/login` 调用**总是**打向此地址（见 src/auth/loginApi.ts），
+ * 不受 USE_MOCK 影响。业务 API `/agent/*` 受 USE_MOCK 控制。
+ */
+export const API_BASE =
+  import.meta.env.VITE_API_BASE || 'https://surfv2-sit-api.nfexinsider.com'
+
+/**
+ * 业务平台标识头 `biz-pf`。主站 surf-one 用 '4'；代理后台值以后端告知为准。
+ * 未注入时 fallback 到 '4'（跟主站一致），上线前需后端确认。
+ */
+export const BIZ_PF = import.meta.env.VITE_BIZ_PF || '4'
 
 /** mock 接口模拟延迟（ms），制造 loading 状态。 */
 export const MOCK_LATENCY_MS = 300

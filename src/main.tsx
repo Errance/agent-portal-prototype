@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { HashRouter, BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Provider as ChakraProvider } from './components/ui/provider'
-import { StubAuthProvider } from './auth'
+import { PrivyAuthProvider } from './auth'
 import App from './App'
 
 /**
@@ -36,23 +36,23 @@ const routerProps = ROUTER_KIND === 'browser' ? { basename: BASENAME || undefine
  * Provider 链（由外至内）：
  * - StrictMode
  * - QueryClientProvider     react-query 缓存
- * - StubAuthProvider        auth 抽象层（Privy 接入时换实现）；注册 401 监听 + token getter
+ * - PrivyAuthProvider       PrivyProvider(SDK) + PrivyAuthBridge（实现 AuthProvider 接口）
  * - Router                  路由
  * - ChakraProvider          主题
  * - App                     业务
  *
- * 401 未登录统一处理由 StubAuthProvider 内部的 useEffect 负责（api:unauthorized → logout）。
+ * 401 未登录统一处理由 PrivyAuthProvider 内部负责（api:unauthorized → logout）。
  */
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <StubAuthProvider>
+      <PrivyAuthProvider>
         <Router {...routerProps}>
           <ChakraProvider forcedTheme="light">
             <App />
           </ChakraProvider>
         </Router>
-      </StubAuthProvider>
+      </PrivyAuthProvider>
     </QueryClientProvider>
   </StrictMode>,
 )

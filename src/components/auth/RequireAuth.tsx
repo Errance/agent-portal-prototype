@@ -1,23 +1,29 @@
-import { useEffect, type ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import { Box, Flex, Text } from '@chakra-ui/react'
+import PillButton from '@/components/shared/PillButton'
 import { useAuth } from '@/auth'
 
 /**
  * 路由守卫：未登录时触发 `auth.login()`，未登录期间渲染模糊背景占位。
  *
  * 设计参考（用户已确认）：代理后台独立域名，未登录用户访问 Dashboard 时
- * 直接弹 Privy modal，而不是导航到独立登录页。模糊占位让用户看见"背后有
- * 内容但被挡住"的层次感。
+ * 直接弹 Privy modal，而不是导航到独立登录页。
  *
- * Privy 接入后，`auth.login()` 内部会打开 Privy modal，此处无须感知。
+ * 防循环：useRef 锁一次性触发 login，modal 关闭 / /login 失败后
+ * 用户可点"重新登录"主动重试，避免 effect 死循环调用 login()。
  */
 export default function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
+  const triggered = useRef(false)
 
+  // 初次未登录时自动触发一次 login；成功后重置
   useEffect(() => {
-    if (!auth.isLoading && !auth.isAuthenticated) {
-      // 触发登录流程（Privy modal 或其它实现）
+    if (!auth.isLoading && !auth.isAuthenticated && !triggered.current) {
+      triggered.current = true
       void auth.login()
+    }
+    if (auth.isAuthenticated) {
+      triggered.current = false
     }
   }, [auth.isLoading, auth.isAuthenticated, auth])
 
@@ -39,7 +45,8 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
   }
 
   if (!auth.isAuthenticated) {
-    // 模糊背景占位。待 Privy modal 接入后，modal 会覆盖在这一层之上。
+    // PrivyAuthProvider 会把 loginError 放到 context value（PrivyAuthBridge 的 useMemo 中扩展了）
+    const loginError = (auth as unknown as { loginError?: Error | null }).loginError ?? null
     return (
       <Flex
         minH="100vh"
@@ -51,18 +58,31 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
         <Box
           bg="bg.200"
           border="1px solid"
-          borderColor="border.100"
+          borderColor={loginError ? 'red.100' : 'border.100'}
           borderRadius="8px"
           p="32px"
           textAlign="center"
           maxW="360px"
         >
           <Text fontFamily="ISB" fontSize="18px" color="text.100" mb="8px">
-            需要登录
+            {loginError ? '登录失败' : '需要登录'}
           </Text>
-          <Text fontSize="13px" color="gray.100">
-            请在弹出窗口中完成登录以继续访问代理后台
+          <Text fontSize="13px" color="gray.100" mb="20px" wordBreak="break-word">
+            {loginError
+              ? loginError.message
+              : '请在弹出窗口中完成登录以继续访问代理后台'}
           </Text>
+          <PillButton
+            variant="solid"
+            size="md"
+            shape="rect"
+            onClick={() => {
+              triggered.current = false
+              void auth.login()
+            }}
+          >
+            {loginError ? '重新登录' : '打开登录窗口'}
+          </PillButton>
         </Box>
       </Flex>
     )
