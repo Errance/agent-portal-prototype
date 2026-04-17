@@ -1,10 +1,12 @@
 import type {
-  AgentStatus, AgentLevel, TradeVisibility, DashboardKPI, InviteCodeSummary,
+  DashboardKPI, InviteCodeSummary,
   Invitee, SubAgent, DailyRevenue, CommissionRecord,
   PerpPosition, PerpOrder, EventOrder, InviteCode, TransferRecord,
   SettlementConfig, InviteStats,
-} from './types'
+} from '@/types/domain'
+import { agentConfig } from './agent-config'
 import { createRng } from '@/utils/prng'
+import { dateDaysAgoShanghai } from '@/utils/tz'
 
 /**
  * mock/data.ts
@@ -20,26 +22,16 @@ const { rand, pick, pickInt, next } = createRng(20260416)
 
 // ---- 基础生成器 ----------------------------------------------------
 const uid = (i: number) => `UID${String(100000 + i)}`
-const date = (daysAgo: number) => {
-  const d = new Date()
-  d.setDate(d.getDate() - daysAgo)
-  return d.toISOString().slice(0, 10) + ' 00:00:00'
-}
-const dateOnly = (daysAgo: number) => date(daysAgo).slice(0, 10)
+/**
+ * 审计 H9 修复：不再用 `new Date().toISOString().slice(0, 10)` 拿 UTC 日历日，
+ * 改为显式按 Asia/Shanghai 生成，与 Dashboard "UTC+8" 文案一致。
+ */
+const date = (daysAgo: number) => `${dateDaysAgoShanghai(daysAgo)} 00:00:00`
+const dateOnly = (daysAgo: number) => dateDaysAgoShanghai(daysAgo)
 const randPs = (min: number, max: number) => rand(min, max, 4)
 
-// ---- 代理账户 -------------------------------------------------------
-export const agentConfig = {
-  status: 'normal' as AgentStatus,
-  selfRebateEnabled: true,
-  tradeVisibility: 'full' as TradeVisibility,
-  isNewAgent: false,
-  currentFlatFeeRate: 1.50,
-  currentProfitShareRate: 0.0080,
-  currentEventRate: 1.20,
-  agentName: '王大拿BG',
-  agentLevel: 3 as AgentLevel,
-}
+// 代理账户基础配置已拆到 @/mock/agent-config，见该文件顶部注释。
+export { agentConfig }
 
 // ---- 仪表盘 KPI（前端不再计算的硬编码示意值） ---------------------------
 export const dashboardKPI: DashboardKPI[] = [

@@ -92,8 +92,22 @@ export default function DataTable<T>({
                   w={col.width}
                   textAlign={col.align || 'left'}
                   cursor={col.sortable ? 'pointer' : 'default'}
+                  tabIndex={col.sortable ? 0 : undefined}
+                  role={col.sortable ? 'button' : undefined}
+                  aria-sort={
+                    col.sortable
+                      ? (sortKey === col.key ? (sortAsc ? 'ascending' : 'descending') : 'none')
+                      : undefined
+                  }
                   onClick={() => col.sortable && handleSort(col.key)}
+                  onKeyDown={col.sortable ? (e: React.KeyboardEvent) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleSort(col.key)
+                    }
+                  } : undefined}
                   _hover={col.sortable ? { color: 'text.100', bg: 'rgba(0,0,0,0.04)' } : {}}
+                  _focusVisible={col.sortable ? { outline: '2px solid', outlineColor: 'theme', outlineOffset: '-2px' } : {}}
                   transition="all 0.2s"
                   {...(stickyRight && ci === columns.length - 1 ? {
                     position: 'sticky' as const, right: 0, zIndex: 2,
@@ -155,8 +169,8 @@ export default function DataTable<T>({
             {safeP} / {totalPages}
           </Text>
           <HStack gap="8px">
-            <PageBtn label="‹" disabled={safeP <= 1} onClick={() => setPage(safeP - 1)} />
-            <PageBtn label="›" disabled={safeP >= totalPages} onClick={() => setPage(safeP + 1)} />
+            <PageBtn label="‹" ariaLabel="上一页" disabled={safeP <= 1} onClick={() => setPage(safeP - 1)} />
+            <PageBtn label="›" ariaLabel="下一页" disabled={safeP >= totalPages} onClick={() => setPage(safeP + 1)} />
           </HStack>
           <Text fontSize="13px" color="gray.200">
             {(safeP - 1) * pageSize + 1}–{Math.min(safeP * pageSize, sorted.length)} / {sorted.length}
@@ -167,8 +181,8 @@ export default function DataTable<T>({
   )
 }
 
-function PageBtn({ label, disabled, onClick }: {
-  label: string; disabled?: boolean; onClick: () => void
+function PageBtn({ label, disabled, onClick, ariaLabel }: {
+  label: string; disabled?: boolean; onClick: () => void; ariaLabel: string
 }) {
   return (
     <Box
@@ -185,6 +199,8 @@ function PageBtn({ label, disabled, onClick }: {
       border="1px solid"
       borderColor={disabled ? 'transparent' : 'border.100'}
       cursor={disabled ? 'not-allowed' : 'pointer'}
+      aria-label={ariaLabel}
+      aria-disabled={disabled || undefined}
       onClick={disabled ? undefined : onClick}
       transition="all 0.2s"
       _hover={disabled ? {} : { bg: 'bg.100', borderColor: 'border.200' }}

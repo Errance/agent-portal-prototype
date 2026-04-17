@@ -1,15 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import type { PerpPosition, PerpOrder, EventOrder } from '@/mock/types'
-import { perpPositions, perpHistory, eventHistory } from '@/mock/data'
-import { USE_MOCK, mockDelay } from '../config'
+import type { PerpPosition, PerpOrder, EventOrder } from '@/types/domain'
+import { mockOrFetch } from '../config'
 import { apiFetch } from '../client'
 
 export function usePerpPositions() {
   return useQuery<PerpPosition[]>({
     queryKey: ['trading', 'perpPositions'],
-    queryFn: () => USE_MOCK
-      ? mockDelay(perpPositions)
-      : apiFetch<PerpPosition[]>('/agent/trading/perp/positions'),
+    queryFn: () => mockOrFetch(
+      async () => (await import('@/mock/data')).perpPositions,
+      () => apiFetch<PerpPosition[]>('/agent/trading/perp/positions'),
+    ),
     staleTime: 15_000,
   })
 }
@@ -17,9 +17,10 @@ export function usePerpPositions() {
 export function usePerpHistory() {
   return useQuery<PerpOrder[]>({
     queryKey: ['trading', 'perpHistory'],
-    queryFn: () => USE_MOCK
-      ? mockDelay(perpHistory)
-      : apiFetch<PerpOrder[]>('/agent/trading/perp/history'),
+    queryFn: () => mockOrFetch(
+      async () => (await import('@/mock/data')).perpHistory,
+      () => apiFetch<PerpOrder[]>('/agent/trading/perp/history'),
+    ),
     staleTime: 30_000,
   })
 }
@@ -27,9 +28,10 @@ export function usePerpHistory() {
 export function useEventHistory() {
   return useQuery<EventOrder[]>({
     queryKey: ['trading', 'eventHistory'],
-    queryFn: () => USE_MOCK
-      ? mockDelay(eventHistory)
-      : apiFetch<EventOrder[]>('/agent/trading/event/history'),
+    queryFn: () => mockOrFetch(
+      async () => (await import('@/mock/data')).eventHistory,
+      () => apiFetch<EventOrder[]>('/agent/trading/event/history'),
+    ),
     staleTime: 30_000,
   })
 }

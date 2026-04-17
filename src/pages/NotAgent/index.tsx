@@ -15,7 +15,7 @@ export default function NotAgent() {
           如需成为代理商，请联系平台运营团队。
         </Text>
         <Box
-          as="a" href="https://t.me/TurboFlow" target="_blank"
+          as="a" href="https://t.me/TurboFlow" target="_blank" rel="noopener noreferrer"
           display="inline-block" px="24px" py="12px"
           bg="nav.bg" color="#fff" borderRadius="6px" fontSize="14px" fontFamily="ISB"
           _hover={{ opacity: 0.85 }}

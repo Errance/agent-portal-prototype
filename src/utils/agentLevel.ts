@@ -1,4 +1,4 @@
-import type { AgentLevel } from '@/mock/types'
+import type { AgentLevel } from '@/types/domain'
 
 export const AGENT_LEVEL_MIN: AgentLevel = 1
 export const AGENT_LEVEL_MAX: AgentLevel = 5

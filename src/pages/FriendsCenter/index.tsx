@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
-import { Link } from 'react-router-dom'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
@@ -10,9 +9,10 @@ import ModalShell from '@/components/shared/ModalShell'
 import RateFormInput from '@/components/shared/RateFormInput'
 import { useAgent } from '@/context/AgentContext'
 import { useInvitees, useSubAgents } from '@/api/queries/friends'
-import type { Invitee, SubAgent } from '@/mock/types'
+import type { Invitee, SubAgent } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
+import { maskUid, truncateText } from '@/utils/mask'
 import { validateRate, type RateErrors } from '@/utils/validateRate'
 import Decimal from 'decimal.js-light'
 
@@ -119,8 +119,9 @@ export default function FriendsCenter() {
       key: 'user', label: '用户 (UID)',
       render: r => (
         <Box>
-          <Text color={r.isSelf ? 'theme' : 'text.100'} fontFamily="ISB" fontSize="15px">
-            {r.isSelf ? '我自己' : r.uid}
+          <Text color={r.isSelf ? 'theme' : 'text.100'} fontFamily="ISB" fontSize="15px"
+            title={r.isSelf ? undefined : r.uid}>
+            {r.isSelf ? '我自己' : maskUid(r.uid)}
           </Text>
           <Text fontSize="12px" color="gray.200" mt="2px">
             {r.isSelf ? '代理商' : r.identityType === 'sub_agent' ? '子代理' : '普通用户'} · {r.registeredAt.split(' ')[0]}
@@ -175,7 +176,7 @@ export default function FriendsCenter() {
       key: 'remark', label: '备注',
       render: r => (
         <Box>
-          <Text color="text.100">{remarks[r.uid] || r.remark || '—'}</Text>
+          <Text color="text.100" title={remarks[r.uid] || r.remark || ''}>{truncateText(remarks[r.uid] || r.remark, 18)}</Text>
           {!r.isSelf && (
             <Box mt="6px">
               <PillButton
@@ -216,8 +217,8 @@ export default function FriendsCenter() {
       key: 'user', label: '子代理',
       render: r => (
         <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.uid}</Text>
-          <Text fontSize="12px" color="gray.200" mt="2px">{r.nickname} · {r.registeredAt.split(' ')[0]}</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.uid}>{maskUid(r.uid)}</Text>
+          <Text fontSize="12px" color="gray.200" mt="2px" title={r.nickname}>{truncateText(r.nickname, 16)} · {r.registeredAt.split(' ')[0]}</Text>
         </Box>
       ),
     },
@@ -272,9 +273,7 @@ export default function FriendsCenter() {
           >
             修改比例
           </PillButton>
-          <Link to={`/revenue?source_uid=${r.uid}`}>
-            <PillButton variant="primary">贡献明细</PillButton>
-          </Link>
+          <PillButton variant="primary" to={`/revenue?source_uid=${r.uid}`}>贡献明细</PillButton>
         </Flex>
       ),
       width: '1%',

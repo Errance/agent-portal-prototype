@@ -8,12 +8,12 @@ import ModalShell from '@/components/shared/ModalShell'
 import RateFormInput from '@/components/shared/RateFormInput'
 import { useAgent } from '@/context/AgentContext'
 import { useInviteCodes, useInviteStats } from '@/api/queries/invite'
-import type { InviteCode } from '@/mock/types'
+import type { InviteCode } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
 import { validateRate, type RateErrors } from '@/utils/validateRate'
 import { safeCopyPromotionLink } from '@/utils/safeUrl'
-import dayjs from 'dayjs'
+import { nowShanghai } from '@/utils/tz'
 
 export default function InvitePromotion() {
   const { isFrozen, currentFlatFeeRate, currentProfitShareRate, currentEventRate } = useAgent()
@@ -71,8 +71,8 @@ export default function InvitePromotion() {
       registrations: 0, firstDepositCount: 0, firstTradeCount: 0,
       tradeDau: 0, tradeVolume: 0, commission: 0,
       linkUrl: `https://app.turboflow.io/r/TF${String(nextSuffix)}`,
-      // M3：统一 UTC+8 时间戳，避免与 Dashboard "UTC+8" 文案不一致
-      createdAt: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+      // H9：显式 Asia/Shanghai 而不是 dayjs 默认的浏览器 local
+      createdAt: nowShanghai(),
       remark: cRemark,
     }
     setCodes(prev => [newCode, ...prev])

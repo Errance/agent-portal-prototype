@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Box, Flex, Text, HStack } from '@chakra-ui/react'
 import { useAgent } from '@/context/AgentContext'
-import type { AgentStatus, TradeVisibility } from '@/mock/types'
+import type { AgentStatus, TradeVisibility } from '@/types/domain'
 
 function Btn({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (

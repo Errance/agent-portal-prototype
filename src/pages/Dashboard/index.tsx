@@ -4,7 +4,7 @@ import StatCard from '@/components/shared/StatCard'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import { useAgent } from '@/context/AgentContext'
 import { useDashboardKpi, useInviteCodeSummary } from '@/api/queries/dashboard'
-import type { InviteCodeSummary, AgentLevel } from '@/mock/types'
+import type { InviteCodeSummary, AgentLevel } from '@/types/domain'
 
 const LEVEL_CONFIG: Record<AgentLevel, { name: string; bg: string; color: string; border: string; glow: string }> = {
   1: { name: '青铜', bg: '#F4F5F7', color: '#57585C', border: '#DEDFE0', glow: 'none' },
@@ -60,14 +60,17 @@ export default function Dashboard() {
           <Text fontFamily="ISB" fontSize="18px" color="text.100" mb="8px" letterSpacing="-0.5px">开启您的推广之旅</Text>
           <Text fontSize="14px" color="gray.100" mb="20px">创建您的第一个推广码，开始发展下级用户并获取返佣收益。</Text>
           <HStack gap="12px">
-            <Link to="/invite">
-              <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF"
-                borderRadius="4px" fontSize="13px" fontFamily="ISB"
-                cursor="pointer" transition="all 0.2s"
-                _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>
-                创建推广码
-              </Box>
-            </Link>
+            {/* H3 修复：不再把 Box as="button" 包在 Link 里；Link 自身渲染为 <a> 并套按钮样式 */}
+            <Box
+              as={Link} to="/invite"
+              display="inline-block" textDecoration="none"
+              px="24px" py="10px" bg="theme" color="#FFFFFF"
+              borderRadius="4px" fontSize="13px" fontFamily="ISB"
+              cursor="pointer" transition="all 0.2s"
+              _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}
+            >
+              创建推广码
+            </Box>
             <Box as="button" px="24px" py="10px" bg="transparent" color="text.100"
               border="1px solid" borderColor="border.100"
               borderRadius="4px" fontSize="13px" cursor="pointer"
@@ -100,15 +103,17 @@ export default function Dashboard() {
       <Box>
         <Flex justify="space-between" align="center" mb="24px">
           <Text fontFamily="ISB" fontSize="20px" color="text.100" letterSpacing="-0.5px">推广概览</Text>
-          <Link to="/invite">
-            <Box as="button" px="20px" py="8px" bg="transparent" color="text.100"
-              border="1px solid" borderColor="border.100"
-              borderRadius="4px" fontSize="13px" fontFamily="ISB"
-              cursor="pointer" transition="all 0.2s"
-              _hover={{ bg: 'bg.200', borderColor: 'border.200' }}>
-              管理推广码
-            </Box>
-          </Link>
+          <Box
+            as={Link} to="/invite"
+            display="inline-block" textDecoration="none"
+            px="20px" py="8px" bg="transparent" color="text.100"
+            border="1px solid" borderColor="border.100"
+            borderRadius="4px" fontSize="13px" fontFamily="ISB"
+            cursor="pointer" transition="all 0.2s"
+            _hover={{ bg: 'bg.200', borderColor: 'border.200' }}
+          >
+            管理推广码
+          </Box>
         </Flex>
         <DataTable
           data={summaryQ.data ?? []}

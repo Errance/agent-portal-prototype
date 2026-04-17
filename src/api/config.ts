@@ -20,3 +20,20 @@ export const MOCK_LATENCY_MS = 300
 export function mockDelay<T>(value: T, ms = MOCK_LATENCY_MS): Promise<T> {
   return new Promise(resolve => setTimeout(() => resolve(value), ms))
 }
+
+/**
+ * Query 适配器（审计 H2 修复）：
+ * - USE_MOCK=true 时动态 import mock/data，让 Vite 把 mock 数据拆成单独的 on-demand chunk，
+ *   生产构建不再把大段 mock 数据塞进主包
+ * - USE_MOCK=false 时走真实 API，根本不触发 mock chunk 下载
+ */
+export async function mockOrFetch<T>(
+  mockLoader: () => Promise<T>,
+  fetcher: () => Promise<T>,
+): Promise<T> {
+  if (USE_MOCK) {
+    const data = await mockLoader()
+    return mockDelay(data)
+  }
+  return fetcher()
+}

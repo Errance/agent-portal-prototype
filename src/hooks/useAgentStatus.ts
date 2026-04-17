@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import type { AgentStatus, TradeVisibility } from '@/mock/types'
-import { agentConfig } from '@/mock/data'
+import type { AgentStatus, TradeVisibility } from '@/types/domain'
+import { agentConfig } from '@/mock/agent-config'
 import { clampAgentLevel } from '@/utils/agentLevel'
 
 export function useAgentStatus() {

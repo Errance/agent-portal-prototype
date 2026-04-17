@@ -7,17 +7,18 @@ import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, Input, FilterItem } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
 import { usePerpPositions, usePerpHistory, useEventHistory } from '@/api/queries/trading'
-import type { PerpPosition, PerpOrder, EventOrder } from '@/mock/types'
+import type { PerpPosition, PerpOrder, EventOrder } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
+import { maskUid, truncateText } from '@/utils/mask'
 
 const allPerpPosCols: Column<PerpPosition>[] = [
   {
     key: 'user', label: '用户 (UID)',
     render: r => (
       <Box>
-        <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.uid}</Text>
-        {r.remark && <Text fontSize="12px" color="gray.200" mt="2px">{r.remark}</Text>}
+        <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.uid}>{maskUid(r.uid)}</Text>
+        {r.remark && <Text fontSize="12px" color="gray.200" mt="2px" title={r.remark}>{truncateText(r.remark, 18)}</Text>}
       </Box>
     ),
   },
@@ -53,8 +54,8 @@ const allPerpHistCols: Column<PerpOrder>[] = [
     key: 'user', label: '用户 (UID)',
     render: r => (
       <Box>
-        <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.uid}</Text>
-        {r.remark && <Text fontSize="12px" color="gray.200" mt="2px">{r.remark}</Text>}
+        <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.uid}>{maskUid(r.uid)}</Text>
+        {r.remark && <Text fontSize="12px" color="gray.200" mt="2px" title={r.remark}>{truncateText(r.remark, 18)}</Text>}
       </Box>
     ),
   },
@@ -95,8 +96,8 @@ const allEventCols: Column<EventOrder>[] = [
     key: 'user', label: '用户 (UID)',
     render: r => (
       <Box>
-        <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.uid}</Text>
-        {r.remark && <Text fontSize="12px" color="gray.200" mt="2px">{r.remark}</Text>}
+        <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.uid}>{maskUid(r.uid)}</Text>
+        {r.remark && <Text fontSize="12px" color="gray.200" mt="2px" title={r.remark}>{truncateText(r.remark, 18)}</Text>}
       </Box>
     ),
   },

@@ -5,9 +5,10 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, Input, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
 import { useTransferRecords } from '@/api/queries/transfers'
-import type { TransferRecord } from '@/mock/types'
+import type { TransferRecord } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
+import { maskUid } from '@/utils/mask'
 
 interface TransferAgg {
   depositCount: number
@@ -82,14 +83,14 @@ export default function OnchainTransfers() {
       key: 'user', label: '用户 (UID)',
       render: r => (
         <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.uid}</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.uid}>{maskUid(r.uid)}</Text>
           <Text fontSize="12px" color="gray.200" mt="2px">{r.userLevel === 'sub_agent' ? '子代理' : '普通用户'}</Text>
         </Box>
       ),
     },
     {
       key: 'sub', label: '归属子代理',
-      render: r => <Text color="text.100">{r.subAgentUid ?? '—'}</Text>,
+      render: r => <Text color="text.100" title={r.subAgentUid ?? ''}>{r.subAgentUid ? maskUid(r.subAgentUid) : '—'}</Text>,
     },
     {
       key: 'type', label: '充提类型',

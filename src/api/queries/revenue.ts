@@ -1,15 +1,15 @@
 import { useQuery } from '@tanstack/react-query'
-import type { DailyRevenue, CommissionRecord, SettlementConfig } from '@/mock/types'
-import { dailyRevenue, commissionRecords, settlementConfig } from '@/mock/data'
-import { USE_MOCK, mockDelay } from '../config'
+import type { DailyRevenue, CommissionRecord, SettlementConfig } from '@/types/domain'
+import { mockOrFetch } from '../config'
 import { apiFetch } from '../client'
 
 export function useDailyRevenue() {
   return useQuery<DailyRevenue[]>({
     queryKey: ['revenue', 'daily'],
-    queryFn: () => USE_MOCK
-      ? mockDelay(dailyRevenue)
-      : apiFetch<DailyRevenue[]>('/agent/revenue/daily'),
+    queryFn: () => mockOrFetch(
+      async () => (await import('@/mock/data')).dailyRevenue,
+      () => apiFetch<DailyRevenue[]>('/agent/revenue/daily'),
+    ),
     staleTime: 60_000,
   })
 }
@@ -17,9 +17,10 @@ export function useDailyRevenue() {
 export function useCommissionRecords() {
   return useQuery<CommissionRecord[]>({
     queryKey: ['revenue', 'commissions'],
-    queryFn: () => USE_MOCK
-      ? mockDelay(commissionRecords)
-      : apiFetch<CommissionRecord[]>('/agent/revenue/commissions'),
+    queryFn: () => mockOrFetch(
+      async () => (await import('@/mock/data')).commissionRecords,
+      () => apiFetch<CommissionRecord[]>('/agent/revenue/commissions'),
+    ),
     staleTime: 30_000,
   })
 }
@@ -27,9 +28,10 @@ export function useCommissionRecords() {
 export function useSettlementConfig() {
   return useQuery<SettlementConfig>({
     queryKey: ['revenue', 'settlement'],
-    queryFn: () => USE_MOCK
-      ? mockDelay(settlementConfig)
-      : apiFetch<SettlementConfig>('/agent/revenue/settlement-config'),
+    queryFn: () => mockOrFetch(
+      async () => (await import('@/mock/data')).settlementConfig,
+      () => apiFetch<SettlementConfig>('/agent/revenue/settlement-config'),
+    ),
     staleTime: 5 * 60_000,
   })
 }

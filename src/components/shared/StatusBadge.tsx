@@ -1,5 +1,5 @@
 import { Box } from '@chakra-ui/react'
-import type { PayoutStatus, TransferStatus, DepositStatus, TradeStatus, EventResult } from '@/mock/types'
+import type { PayoutStatus, TransferStatus, DepositStatus, TradeStatus, EventResult } from '@/types/domain'
 
 const payoutMap: Record<PayoutStatus, { label: string; color: string; bg: string }> = {
   paid: { label: '已发放', color: '#0ABAB5', bg: 'rgba(10,186,181,0.1)' },

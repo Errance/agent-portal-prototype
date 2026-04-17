@@ -1,16 +1,16 @@
 import { useQuery } from '@tanstack/react-query'
-import type { Invitee, SubAgent } from '@/mock/types'
-import { invitees, subAgents } from '@/mock/data'
-import { USE_MOCK, mockDelay } from '../config'
+import type { Invitee, SubAgent } from '@/types/domain'
+import { mockOrFetch } from '../config'
 import { apiFetch } from '../client'
 
 /** GET /agent/friends/invitees */
 export function useInvitees() {
   return useQuery<Invitee[]>({
     queryKey: ['friends', 'invitees'],
-    queryFn: () => USE_MOCK
-      ? mockDelay(invitees)
-      : apiFetch<Invitee[]>('/agent/friends/invitees'),
+    queryFn: () => mockOrFetch(
+      async () => (await import('@/mock/data')).invitees,
+      () => apiFetch<Invitee[]>('/agent/friends/invitees'),
+    ),
     staleTime: 30_000,
   })
 }
@@ -19,9 +19,10 @@ export function useInvitees() {
 export function useSubAgents() {
   return useQuery<SubAgent[]>({
     queryKey: ['friends', 'subAgents'],
-    queryFn: () => USE_MOCK
-      ? mockDelay(subAgents)
-      : apiFetch<SubAgent[]>('/agent/friends/sub-agents'),
+    queryFn: () => mockOrFetch(
+      async () => (await import('@/mock/data')).subAgents,
+      () => apiFetch<SubAgent[]>('/agent/friends/sub-agents'),
+    ),
     staleTime: 30_000,
   })
 }

@@ -5,9 +5,10 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
 import { useDailyRevenue, useCommissionRecords, useSettlementConfig } from '@/api/queries/revenue'
-import type { DailyRevenue, CommissionRecord } from '@/mock/types'
+import type { DailyRevenue, CommissionRecord } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
+import { maskUid } from '@/utils/mask'
 import { useSanitizedUrlParam } from '@/hooks/useUrlState'
 
 interface CommissionAgg {
@@ -181,7 +182,9 @@ export default function RevenueCenter() {
   const recordColumns: Column<CommissionRecord>[] = useMemo(() => [
     {
       key: 'user', label: '来源用户',
-      render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.sourceUid ?? '—'}</Text>,
+      render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.sourceUid ?? ''}>
+        {r.sourceUid ? maskUid(r.sourceUid) : '—'}
+      </Text>,
     },
     {
       key: 'type', label: '来源类型',
