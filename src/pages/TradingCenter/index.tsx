@@ -4,6 +4,7 @@ import { Box, Flex, Text, Tabs, HStack } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
+import PillButton from '@/components/shared/PillButton'
 import { FilterBar, Select, Input, FilterItem } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
 import { usePerpPositions, usePerpHistory, useEventHistory } from '@/api/queries/trading'
@@ -267,11 +268,9 @@ export default function TradingCenter() {
         <Text fontFamily="ISB" fontSize="24px" color="text.100" letterSpacing="-0.5px">交易中心</Text>
         {!isSummary && (
           <Box position="relative">
-            <Box as="button" px="16px" py="8px" bg="transparent" border="1px solid" borderColor="border.100"
-              borderRadius="4px" fontSize="13px" color="text.100" cursor="pointer"
-              onClick={() => setShowColPicker(!showColPicker)}
-              transition="all 0.2s"
-              _hover={{ bg: 'bg.200', borderColor: 'border.200' }}>自定义列</Box>
+            <PillButton variant="ghost" size="md" shape="rect" onClick={() => setShowColPicker(!showColPicker)}>
+              自定义列
+            </PillButton>
             {showColPicker && (
               <>
                 <Box position="fixed" inset={0} zIndex={49} onClick={() => setShowColPicker(false)} />

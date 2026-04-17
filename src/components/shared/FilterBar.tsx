@@ -1,6 +1,6 @@
-import { type ReactNode } from 'react'
+import { cloneElement, isValidElement, useId, type ReactNode, type ReactElement } from 'react'
 import { Box, Flex, Text, Grid } from '@chakra-ui/react'
-import { ChakraInput, ChakraSelect } from './styled'
+import { ChakraInput, ChakraSelect, ChakraLabel } from './styled'
 
 interface FilterItemProps {
   label: string
@@ -9,21 +9,42 @@ interface FilterItemProps {
   wide?: boolean
 }
 
+/**
+ * 审计 H4 修复：FilterItem 生成唯一 id，通过 `<label htmlFor>` + 克隆 children 注入 id 属性，
+ * 使屏幕阅读器 / 点击 label 聚焦输入。
+ *
+ * 约束：children 必须是单一 React element（例如 <Input>, <Select>, <DateRangeInput>）；
+ * 这些组件的根节点会收到 `id` prop。
+ */
 export function FilterItem({ label, children, required, wide }: FilterItemProps) {
+  const inputId = useId()
+  const child = isValidElement(children)
+    ? cloneElement(children as ReactElement<{ id?: string }>, { id: inputId })
+    : children
   return (
     <Box gridColumn={wide ? 'span 2' : undefined} minW="0">
-      <Text fontSize="12px" color="gray.200" mb="8px" textTransform="uppercase" letterSpacing="0.5px">
+      <ChakraLabel
+        htmlFor={inputId}
+        display="block"
+        fontSize="12px"
+        color="gray.200"
+        mb="8px"
+        textTransform="uppercase"
+        letterSpacing="0.5px"
+        cursor="pointer"
+      >
         {required && <Text as="span" color="red.100">* </Text>}
         {label}
-      </Text>
-      {children}
+      </ChakraLabel>
+      {child}
     </Box>
   )
 }
 
 export function Select({
-  value, onChange, options, disabled,
+  id, value, onChange, options, disabled,
 }: {
+  id?: string
   value: string
   onChange: (v: string) => void
   options: { label: string; value: string }[]
@@ -31,6 +52,7 @@ export function Select({
 }) {
   return (
     <ChakraSelect
+      id={id}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
@@ -59,8 +81,9 @@ export function Select({
 }
 
 export function Input({
-  value, onChange, placeholder, type = 'text',
+  id, value, onChange, placeholder, type = 'text',
 }: {
+  id?: string
   value: string
   onChange: (v: string) => void
   placeholder?: string
@@ -68,6 +91,7 @@ export function Input({
 }) {
   return (
     <ChakraInput
+      id={id}
       type={type}
       value={value}
       onChange={(e) => onChange(e.target.value)}
@@ -148,9 +172,14 @@ export function FilterBar({ children, onSearch, onReset }: {
   )
 }
 
+/**
+ * 日期范围输入。DateRangeInput 由两个 Input 组成，不能由外部 id 统一绑定；
+ * 若需要 a11y 可再拆分为两个 FilterItem。
+ */
 export function DateRangeInput({
-  from, to, onFromChange, onToChange,
+  id, from, to, onFromChange, onToChange,
 }: {
+  id?: string
   from: string; to: string
   onFromChange: (v: string) => void
   onToChange: (v: string) => void
@@ -158,7 +187,7 @@ export function DateRangeInput({
   return (
     <Flex gap="8px" align="center" minW="0">
       <Box flex={1} minW="0">
-        <Input type="date" value={from} onChange={onFromChange} />
+        <Input id={id} type="date" value={from} onChange={onFromChange} />
       </Box>
       <Text fontSize="13px" color="gray.200" flexShrink={0}>—</Text>
       <Box flex={1} minW="0">

@@ -348,15 +348,12 @@ export default function FriendsCenter() {
           _focus={{ borderColor: 'theme', boxShadow: '0 0 0 1px rgba(10,186,181,0.5)' }}
         />
         <Flex justify="flex-end" gap="12px" mt="32px">
-          <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
-            borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setEditUid(null)}
-            transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
-          <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF" borderRadius="4px" fontSize="13px"
-            fontFamily="ISB" cursor="pointer" onClick={() => {
-              if (!editUid) return
-              setRemarks(prev => ({ ...prev, [editUid]: editVal }))
-              setEditUid(null)
-            }} transition="all 0.2s" _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>保存</Box>
+          <PillButton variant="ghost" size="lg" shape="rect" onClick={() => setEditUid(null)}>取消</PillButton>
+          <PillButton variant="solid" size="lg" shape="rect" onClick={() => {
+            if (!editUid) return
+            setRemarks(prev => ({ ...prev, [editUid]: editVal }))
+            setEditUid(null)
+          }}>保存</PillButton>
         </Flex>
       </ModalShell>
 
@@ -373,12 +370,8 @@ export default function FriendsCenter() {
           <RateFormInput label="事件合约返佣比例（%）" value={editEvent} onChange={setEditEvent} step="0.01" error={rateErrors.event} extra={`上限: ${currentEventRate}%`} />
         </Flex>
         <Flex justify="flex-end" gap="12px" mt="32px">
-          <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
-            borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setEditRateAgent(null)}
-            transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
-          <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF" borderRadius="4px" fontSize="13px"
-            fontFamily="ISB" cursor="pointer" onClick={handleSaveRate}
-            transition="all 0.2s" _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>保存</Box>
+          <PillButton variant="ghost" size="lg" shape="rect" onClick={() => setEditRateAgent(null)}>取消</PillButton>
+          <PillButton variant="solid" size="lg" shape="rect" onClick={handleSaveRate}>保存</PillButton>
         </Flex>
       </ModalShell>
     </Box>

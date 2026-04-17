@@ -4,10 +4,13 @@ import { ChakraLink } from './styled'
 
 type Variant = 'primary' | 'solid' | 'neutral' | 'danger' | 'dangerSolid' | 'ghost'
 type Size = 'sm' | 'md' | 'lg'
+type Shape = 'pill' | 'rect'
 
 interface Props extends Omit<BoxProps, 'onClick' | 'children'> {
   variant?: Variant
   size?: Size
+  /** 外形：pill=全圆角（列表行操作），rect=4px 圆角（CTA / 弹窗按钮） */
+  shape?: Shape
   disabled?: boolean
   onClick?: () => void
   children: ReactNode
@@ -36,7 +39,8 @@ const SIZE_STYLE: Record<Size, { px: string; py: string; fontSize: string }> = {
  * 传入 `to` 时渲染为 react-router Link（<a>），其它情况渲染为 <button>。
  */
 export default function PillButton({
-  variant = 'neutral', size = 'sm', disabled, onClick, children, title, to, ...rest
+  variant = 'neutral', size = 'sm', shape = 'pill',
+  disabled, onClick, children, title, to, ...rest
 }: Props) {
   const v = VARIANT_STYLE[variant]
   const s = SIZE_STYLE[size]
@@ -45,7 +49,7 @@ export default function PillButton({
     py: s.py,
     fontSize: s.fontSize,
     fontFamily: 'ISB',
-    borderRadius: 'full',
+    borderRadius: shape === 'pill' ? 'full' : '4px',
     bg: disabled ? 'bg.300' : v.bg,
     color: disabled ? 'gray.200' : v.color,
     border: v.border ? '1px solid' : 'none',

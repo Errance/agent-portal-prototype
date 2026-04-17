@@ -14,4 +14,5 @@ import { Link as RouterLink } from 'react-router-dom'
 export const ChakraInput = chakra('input')
 export const ChakraSelect = chakra('select')
 export const ChakraAnchor = chakra('a')
+export const ChakraLabel = chakra('label')
 export const ChakraLink = chakra(RouterLink)

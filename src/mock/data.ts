@@ -33,16 +33,8 @@ const randPs = (min: number, max: number) => rand(min, max, 4)
 // 代理账户基础配置已拆到 @/mock/agent-config，见该文件顶部注释。
 export { agentConfig }
 
-// ---- 仪表盘 KPI（前端不再计算的硬编码示意值） ---------------------------
-export const dashboardKPI: DashboardKPI[] = [
-  { label: '今日注册数', value: 23, unit: '人', changePercent: 15.0 },
-  { label: '今日净充值', value: 45280.50, unit: 'USDT', changePercent: -8.3 },
-  { label: '今日 Flat Fee', value: 1256.80, unit: 'USDT', changePercent: 12.5 },
-  { label: '今日 PS 有效交易量', value: 892340.00, unit: 'USDT', changePercent: 5.2 },
-  { label: '今日事件合约交易量', value: 156720.00, unit: 'USDT', changePercent: 9.8 },
-  { label: '今日佣金（直推）', value: 3842.65, unit: 'USDT', changePercent: 22.1 },
-  { label: '今日平台奖励', value: 1280.40, unit: 'USDT', changePercent: 18.5 },
-]
+// dashboardKPI 从下方数据派生（审计 M11：Dashboard 与 RevenueCenter/FriendsCenter/
+// OnchainTransfers 共用同一批 mock 源数据）。见本文件尾部 `dashboardKPI` 定义。
 
 export const inviteCodeSummary: InviteCodeSummary[] = Array.from({ length: 8 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
@@ -236,3 +228,81 @@ export const transferRecords: TransferRecord[] = Array.from({ length: 40 }, () =
     time: date(pickInt(0, 29)),
   }
 })
+
+// ---- Dashboard KPI（审计 M11：从上面的源数据派生，和 RevenueCenter/FriendsCenter/
+// OnchainTransfers 共享同一事实源，保证 "今日" 口径在多个页面之间完全一致） --------
+
+const todayDate = dailyRevenue[0].date          // YYYY-MM-DD
+const yesterdayDate = dailyRevenue[1].date
+
+function changePct(t: number, y: number): number {
+  if (!Number.isFinite(t) || !Number.isFinite(y)) return 0
+  if (y === 0) return t === 0 ? 0 : 100
+  return +(((t - y) / y) * 100).toFixed(2)
+}
+
+function sumBy<T>(list: T[], pred: (x: T) => number): number {
+  return list.reduce((acc, x) => acc + pred(x), 0)
+}
+
+// 注册数
+const regsToday = invitees.filter(u => !u.isSelf && u.registeredAt.startsWith(todayDate)).length
+const regsYesterday = invitees.filter(u => !u.isSelf && u.registeredAt.startsWith(yesterdayDate)).length
+
+// 净充值 = 成功 deposit − 成功 withdrawal（与 OnchainTransfers `aggregate` 同一规则）
+const transfersSucceeded = transferRecords.filter(r => r.status === 'success')
+const netDeposit = (day: string) => {
+  const rows = transfersSucceeded.filter(r => r.time.startsWith(day))
+  return sumBy(rows.filter(r => r.type === 'deposit'), r => r.amount)
+    - sumBy(rows.filter(r => r.type === 'withdrawal'), r => r.amount)
+}
+const netDepositToday = netDeposit(todayDate)
+const netDepositYesterday = netDeposit(yesterdayDate)
+
+// 直推佣金 / 平台奖励（按 USDT 口径，与 RevenueCenter aggregateCommissions.totalUsdt 同源）
+const commByType = (day: string, type: 'direct' | 'platform_reward') =>
+  sumBy(
+    commissionRecords.filter(r =>
+      r.time.startsWith(day) && r.sourceType === type && r.settlementCoin === 'USDT',
+    ),
+    r => r.commissionAmount,
+  )
+const directUsdtToday = commByType(todayDate, 'direct')
+const directUsdtYesterday = commByType(yesterdayDate, 'direct')
+const platformUsdtToday = commByType(todayDate, 'platform_reward')
+const platformUsdtYesterday = commByType(yesterdayDate, 'platform_reward')
+
+// Flat Fee / PS 交易量 / 事件交易量 直接读 dailyRevenue 当日行
+const today = dailyRevenue[0]
+const yesterday = dailyRevenue[1]
+
+export const dashboardKPI: DashboardKPI[] = [
+  {
+    label: '今日注册数', value: regsToday, unit: '人',
+    changePercent: changePct(regsToday, regsYesterday),
+  },
+  {
+    label: '今日净充值', value: +netDepositToday.toFixed(2), unit: 'USDT',
+    changePercent: changePct(netDepositToday, netDepositYesterday),
+  },
+  {
+    label: '今日 Flat Fee', value: +today.flatFeeCommUsdt.toFixed(2), unit: 'USDT',
+    changePercent: changePct(today.flatFeeCommUsdt, yesterday.flatFeeCommUsdt),
+  },
+  {
+    label: '今日 PS 有效交易量', value: +today.psTradeVolUsdt.toFixed(2), unit: 'USDT',
+    changePercent: changePct(today.psTradeVolUsdt, yesterday.psTradeVolUsdt),
+  },
+  {
+    label: '今日事件合约交易量', value: +today.eventTradeVolume.toFixed(2), unit: 'USDT',
+    changePercent: changePct(today.eventTradeVolume, yesterday.eventTradeVolume),
+  },
+  {
+    label: '今日佣金（直推）', value: +directUsdtToday.toFixed(2), unit: 'USDT',
+    changePercent: changePct(directUsdtToday, directUsdtYesterday),
+  },
+  {
+    label: '今日平台奖励', value: +platformUsdtToday.toFixed(2), unit: 'USDT',
+    changePercent: changePct(platformUsdtToday, platformUsdtYesterday),
+  },
+]

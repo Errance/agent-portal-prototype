@@ -259,14 +259,14 @@ export default function InvitePromotion() {
             </Box>
           </Flex>
         </Flex>
-        <Box as="button" px="24px" py="10px" bg={isFrozen ? 'bg.300' : 'theme'}
-          color={isFrozen ? 'gray.200' : '#FFFFFF'} borderRadius="4px" fontSize="14px" fontFamily="ISB"
-          cursor={isFrozen ? 'not-allowed' : 'pointer'} onClick={() => !isFrozen && setShowCreate(true)}
-          transition="all 0.2s"
-          _hover={isFrozen ? {} : { bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}
-          title={isFrozen ? '账号已冻结' : ''}>
+        <PillButton
+          variant="solid" size="lg" shape="rect"
+          disabled={isFrozen}
+          onClick={() => setShowCreate(true)}
+          title={isFrozen ? '账号已冻结' : ''}
+        >
           新建推广码
-        </Box>
+        </PillButton>
       </Flex>
 
       {copyError && (
@@ -340,12 +340,8 @@ export default function InvitePromotion() {
           </Box>
         </Flex>
         <Flex justify="flex-end" gap="12px" mt="32px">
-          <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
-            borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setShowCreate(false)}
-            transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
-          <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF" borderRadius="4px" fontSize="13px"
-            fontFamily="ISB" cursor="pointer" onClick={handleCreate}
-            transition="all 0.2s" _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>创建</Box>
+          <PillButton variant="ghost" size="lg" shape="rect" onClick={() => setShowCreate(false)}>取消</PillButton>
+          <PillButton variant="solid" size="lg" shape="rect" onClick={handleCreate}>创建</PillButton>
         </Flex>
       </ModalShell>
 
@@ -361,12 +357,8 @@ export default function InvitePromotion() {
         </Flex>
         <Text fontSize="13px" color="gray.200" mt="24px">修改不追溯，仅影响后续通过该推广码注册的新用户。</Text>
         <Flex justify="flex-end" gap="12px" mt="32px">
-          <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
-            borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setEditCode(null)}
-            transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
-          <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF" borderRadius="4px" fontSize="13px"
-            fontFamily="ISB" cursor="pointer" onClick={handleEdit}
-            transition="all 0.2s" _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>保存</Box>
+          <PillButton variant="ghost" size="lg" shape="rect" onClick={() => setEditCode(null)}>取消</PillButton>
+          <PillButton variant="solid" size="lg" shape="rect" onClick={handleEdit}>保存</PillButton>
         </Flex>
       </ModalShell>
 
@@ -380,12 +372,8 @@ export default function InvitePromotion() {
           </Text>
         )}
         <Flex justify="flex-end" gap="12px">
-          <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
-            borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setRevokeCode(null)}
-            transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
-          <Box as="button" px="24px" py="10px" bg="red.100" color="#FFFFFF" borderRadius="4px" fontSize="13px"
-            fontFamily="ISB" cursor="pointer" onClick={handleRevoke}
-            transition="all 0.2s" _hover={{ bg: '#E03E3E' }}>确认作废</Box>
+          <PillButton variant="ghost" size="lg" shape="rect" onClick={() => setRevokeCode(null)}>取消</PillButton>
+          <PillButton variant="dangerSolid" size="lg" shape="rect" onClick={handleRevoke}>确认作废</PillButton>
         </Flex>
       </ModalShell>
 
@@ -410,11 +398,12 @@ export default function InvitePromotion() {
               <Text fontSize="12px" color="gray.200" textTransform="uppercase" letterSpacing="0.5px" mb="8px">推广链接</Text>
               <Flex align="center" gap="12px" bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="4px" p="12px">
                 <Text fontSize="14px" color="text.100" flex={1} overflow="hidden" textOverflow="ellipsis">{createdCode.linkUrl}</Text>
-                <Box as="button" px="16px" py="6px" bg="transparent" color="theme" border="1px solid" borderColor="theme"
-                  borderRadius="4px" fontSize="12px" fontFamily="ISB" cursor="pointer" onClick={() => copyLink(createdCode.linkUrl, createdCode.code)}
-                  transition="all 0.2s" _hover={{ bg: 'rgba(10,186,181,0.1)' }}>
+                <PillButton
+                  variant="primary" size="md" shape="rect"
+                  onClick={() => copyLink(createdCode.linkUrl, createdCode.code)}
+                >
                   {copied === createdCode.code ? '已复制 ✓' : '复制'}
-                </Box>
+                </PillButton>
               </Flex>
             </Box>
             {createdCode.remark && (

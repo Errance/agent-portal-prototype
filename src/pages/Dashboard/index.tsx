@@ -1,6 +1,7 @@
 import { Box, Flex, Text, HStack, Grid } from '@chakra-ui/react'
 import StatCard from '@/components/shared/StatCard'
 import DataTable, { type Column } from '@/components/shared/DataTable'
+import PillButton from '@/components/shared/PillButton'
 import { ChakraLink } from '@/components/shared/styled'
 import { useAgent } from '@/context/AgentContext'
 import { useDashboardKpi, useInviteCodeSummary } from '@/api/queries/dashboard'
@@ -72,13 +73,9 @@ export default function Dashboard() {
             >
               创建推广码
             </ChakraLink>
-            <Box as="button" px="24px" py="10px" bg="transparent" color="text.100"
-              border="1px solid" borderColor="border.100"
-              borderRadius="4px" fontSize="13px" cursor="pointer"
-              onClick={() => setIsNewAgent(false)}
-              transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>
+            <PillButton variant="ghost" size="lg" shape="rect" onClick={() => setIsNewAgent(false)}>
               我知道了
-            </Box>
+            </PillButton>
           </HStack>
         </Box>
       )}
