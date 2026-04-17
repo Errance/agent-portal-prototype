@@ -145,6 +145,10 @@ function usePrivyExchange(options: UsePrivyExchangeOptions) {
 
   const [isExchanging, setIsExchanging] = useState(false)
   const [lastError, setLastError] = useState<Error | null>(null)
+  // justLoggedOut：用户"主动登出"后的 sticky flag，阻断 auto-exchange，防止
+  // `/sessions/logout` CORS 失败 (privy.authenticated 残留 true) 时后续 render
+  // 立刻 re-exchange 导致"登出无效"的体验。下一次用户显式 `login()` 时重置。
+  const [justLoggedOut, setJustLoggedOut] = useState(false)
 
   const identityTokenRef = useRef<string | null>(identityToken ?? null)
   useEffect(() => {
@@ -218,8 +222,15 @@ function usePrivyExchange(options: UsePrivyExchangeOptions) {
       await exchangeJwt(loginMethod, loginAccount)
     },
     onError: err => {
-      console.error('[auth/privy] useLogin onError:', err)
       const message = typeof err === 'string' ? err : (err as Error)?.message || 'Privy 登录出错'
+      // `exited_auth_flow` = 用户主动关闭 Privy modal，不是真正的错误；
+      // 直接忽略（不打 toast、不置 lastError），让用户点击背景页任意位置
+      // 即可重新唤起 modal（见 RequireAuth onClick）。
+      if (message === 'exited_auth_flow') {
+        console.info('[auth/privy] user closed Privy modal before completion')
+        return
+      }
+      console.error('[auth/privy] useLogin onError:', err)
       const wrapped = new Error(message)
       setLastError(wrapped)
       onExchangeErrorRef.current(wrapped)
@@ -241,6 +252,10 @@ function usePrivyExchange(options: UsePrivyExchangeOptions) {
     if (hasToken) return
     if (isExchanging) return
     if (lastError) return
+    // justLoggedOut：用户刚手动登出，`/sessions/logout` 失败时 privy.authenticated
+    // 可能仍为 true；此处必须跳过，否则会立即 re-exchange 登回同一账号。
+    // 用户显式点 login() 时 `justLoggedOut` 置 false 才会再次触发。
+    if (justLoggedOut) return
     if (autoExchangeRef.current) return
     autoExchangeRef.current = true
     const wallet = privy.user?.wallet
@@ -257,17 +272,44 @@ function usePrivyExchange(options: UsePrivyExchangeOptions) {
     hasToken,
     isExchanging,
     lastError,
+    justLoggedOut,
     exchangeJwt,
   ])
 
   const openLoginModal = useCallback(() => {
     setLastError(null)
+    // 用户显式 login：解除 logout sticky 锁，让 auto-exchange 重新放行
+    setJustLoggedOut(false)
+    // 若 Privy session 还活着（CORS logout 失败时常见），privy.login() 会打
+    // "already logged in" 的 warning 但不会弹 modal。此时直接 return 让
+    // auto-exchange effect 自动拿新 JWT 登回去——不然用户点 login 什么都不发生。
+    if (privy.authenticated) return
     privy.login()
   }, [privy])
 
   const resetPrivySession = useCallback(async () => {
     setLastError(null)
+    // 登出后阻断 auto-exchange：即使 privy.authenticated 仍为 true，也不要
+    // 立刻 re-exchange 把用户拉回来。下一次用户显式 login() 时解除。
+    setJustLoggedOut(true)
     await privyLogout().catch(() => undefined)
+    // 兜底：Privy 的 `/sessions/logout` 在 dev / 特定配置下会 CORS 400，
+    // 导致 SDK 本地状态 `privy.authenticated` 残留为 true，下次 `privy.login()`
+    // 直接报 "already logged in" 不会弹 modal。手动清掉 Privy 写入的 localStorage
+    // key（`privy:*`），让 SDK 下次自举时失去 session 依据、正常弹 modal。
+    // 注意：这不保证内存中 `privy.authenticated` 同步变 false，但至少在下次
+    // 页面刷新 / SDK 再初始化时会生效；配合我们的 `openLoginModal` 对
+    // `privy.authenticated=true` 的兼容处理，实际效果覆盖 99%。
+    try {
+      if (typeof window !== 'undefined') {
+        for (let i = window.localStorage.length - 1; i >= 0; i--) {
+          const key = window.localStorage.key(i)
+          if (key && key.startsWith('privy:')) window.localStorage.removeItem(key)
+        }
+      }
+    } catch {
+      // ignore storage errors (Safari 隐私模式等)
+    }
   }, [privyLogout])
 
   return {

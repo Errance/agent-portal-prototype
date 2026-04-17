@@ -20,13 +20,20 @@ import { useAuth } from '@/auth'
 export default function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
   const triggered = useRef(false)
+  // 记录上一次的 isAuthenticated，用于检测"登出"边沿（authed → !authed），
+  // 这种情况下需要重置 triggered 让 auto-trigger 重新弹出 Privy modal。
+  const prevAuthedRef = useRef<boolean | null>(null)
 
   useEffect(() => {
     if (auth.isLoading) return
+    const wasAuthed = prevAuthedRef.current === true
+    prevAuthedRef.current = auth.isAuthenticated
     if (auth.isAuthenticated) {
       triggered.current = false
       return
     }
+    // 登出瞬间（authed=true → false）：重置 triggered，下面会再次触发 login()
+    if (wasAuthed) triggered.current = false
     if (triggered.current) return
     triggered.current = true
     void auth.login()
