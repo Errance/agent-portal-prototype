@@ -19,23 +19,32 @@ import { useAuth } from '@/auth'
  */
 export default function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
-  const triggered = useRef(false)
-  // 记录上一次的 isAuthenticated，用于检测"登出"边沿（authed → !authed），
-  // 这种情况下需要重置 triggered 让 auto-trigger 重新弹出 Privy modal。
-  const prevAuthedRef = useRef<boolean | null>(null)
+  /**
+   * 自动 trigger Privy modal 只在整个页面生命周期内执行**一次**：
+   * - 初次加载、未登录：弹 modal（用户想登录）
+   * - 已经 auto-trigger 过（无论成功 / 关闭 / 登出）：保持 blur 页面、
+   *   等用户显式点击背景或 UserMenu 里的登录重试
+   *
+   * 关键：一旦用户成功登录过、再登出，我们**不再** auto-trigger。
+   * 否则因为 Privy 的 `/sessions/logout` 跨域失败 (`privy.authenticated`
+   * 残留 true) + `openLoginModal` 里 early return 的组合，会立刻让
+   * auto-exchange 再拿一把 JWT 把用户"偷偷登回来"。
+   *
+   * "成功登录过后再出问题" 的被动场景（比如 JWT 过期 → 401 →
+   * passive logout）走的是另一条路径：`AuthToast` 给用户一个"重新登录"
+   * 按钮；用户点 = 显式 gesture，会走 `openLoginModal` 清掉 justLoggedOut。
+   */
+  const autoLoginFiredRef = useRef(false)
 
   useEffect(() => {
     if (auth.isLoading) return
-    const wasAuthed = prevAuthedRef.current === true
-    prevAuthedRef.current = auth.isAuthenticated
     if (auth.isAuthenticated) {
-      triggered.current = false
+      // 认证过就永远不再 auto-trigger（防止 logout 被秒 re-login）
+      autoLoginFiredRef.current = true
       return
     }
-    // 登出瞬间（authed=true → false）：重置 triggered，下面会再次触发 login()
-    if (wasAuthed) triggered.current = false
-    if (triggered.current) return
-    triggered.current = true
+    if (autoLoginFiredRef.current) return
+    autoLoginFiredRef.current = true
     void auth.login()
   }, [auth.isLoading, auth.isAuthenticated, auth])
 
