@@ -46,15 +46,19 @@ export const privyConfig: PrivyClientConfig = {
 }
 
 /**
- * sit 默认 Privy App ID。
+ * sit 默认 Privy App ID（LP Dashboard 专用 App，后端开发确认）。
  *
- * 当前用 surf-one 的 App ID，因为后端域名 `surfv2-sit-api.nfexinsider.com`
- * 是 surf-one 基础设施，`/login` 校验 Privy JWT 的 `aud` claim 需要等于
- * surf-one App ID，否则返回 "aud claim must be your Privy App ID"（401）。
+ * agent-portal / LP Dashboard 有**独立**的 Privy App，不跟 surf-one 业务
+ * sit App 共用（避免开发模式 user limit 冲突）。后端 `/login` 的 aud 校验
+ * 对齐的是这组 ID。
  *
- * 若将来 agent-portal 独立到 turboflow 自己的后端，换回 turboflow App ID：
- *   turboflow sit: cmbir1ip600bejx0mu6b42iek
- *   turboflow uat: cmdsozhfd004mlb0b47ukqv7s
- *   turboflow prod: cmcjy9lbg0028l70m9owhg0oa
+ * 环境对照：
+ *   LP sit  = cmb61g21n0087kz0mk7wo5b74
+ *   LP uat  = cmb6av9be01kml40ne5c6ivx8
+ *   LP prod = cmb6agllr01jek10mdsl79fzk
+ *
+ * 历史参考（不使用）：
+ *   surf-one 业务 sit = cm3zc6y73001tjxd1ui968tg7（开发模式 user limit 已满）
+ *   turboflow 主站 sit = cmbir1ip600bejx0mu6b42iek
  */
-export const DEFAULT_PRIVY_APP_ID = 'cm3zc6y73001tjxd1ui968tg7'
+export const DEFAULT_PRIVY_APP_ID = 'cmb61g21n0087kz0mk7wo5b74'
