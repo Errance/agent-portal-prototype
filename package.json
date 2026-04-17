@@ -1,7 +1,9 @@
 {
-  "name": "agent-portal-prototype",
+  "name": "agent-portal",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.2.0",
+  "description": "TurboFlow Agent Portal - web front-end for agent operations",
+  "license": "UNLICENSED",
   "type": "module",
   "scripts": {
     "dev": "vite",

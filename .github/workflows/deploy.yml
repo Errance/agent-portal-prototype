@@ -19,42 +19,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # Build latest (current HEAD)
       - run: npm ci
-      - run: VITE_BASE=/agent-portal-prototype/latest/ npm run build
-      - run: mv dist dist-latest
-
-      # Build v1 (original prototype before feedback)
-      - run: git checkout ac20013 -- src/ index.html
-      - run: npm ci
-      - run: VITE_BASE=/agent-portal-prototype/v1/ npm run build
-      - run: mv dist dist-v1
-
-      # Restore working tree
-      - run: git checkout HEAD -- src/ index.html
-
-      # Merge into single dist
-      - run: |
-          mkdir -p dist/latest dist/v1
-          cp -r dist-latest/* dist/latest/
-          cp -r dist-v1/* dist/v1/
-
-      # Root redirect page
-      - run: |
-          cat > dist/index.html << 'REDIRECT'
-          <!DOCTYPE html>
-          <html>
-          <head><meta http-equiv="refresh" content="0;url=latest/"></head>
-          <body><a href="latest/">Redirecting...</a></body>
-          </html>
-          REDIRECT
+      - run: npm run build
+        env:
+          VITE_BASE: ${{ vars.VITE_BASE || '/' }}
 
       - uses: actions/configure-pages@v5
 

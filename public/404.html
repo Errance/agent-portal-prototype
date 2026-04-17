@@ -8,7 +8,7 @@
       // index.html 内脚本会还原为真实路径并交给 BrowserRouter 处理。
       // 仅当 VITE_ROUTER=browser 时才会走到这段逻辑；HashRouter 部署不会进入 404。
       (function () {
-        var segments = 1; // 与 vite.config base 层级对齐（/agent-portal-prototype/）
+        var segments = 0; // 与 vite.config base 层级对齐；若部署到子路径请按路径段数调整
         var l = window.location;
         var path = '/' + l.pathname
           .split('/')
