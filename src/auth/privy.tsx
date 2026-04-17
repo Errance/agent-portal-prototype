@@ -70,6 +70,28 @@ function PrivyAuthBridge({ children }: { children: ReactNode }) {
         if (!accessToken || !idToken) {
           throw new LoginError('privy_token_missing', 'Privy token 未就绪')
         }
+        // 调试：DEV 下打印将发送给后端的 JWT aud/iss/exp，便于核对 App ID 是否一致
+        if (import.meta.env.DEV) {
+          const debugPayload = (tok: string, label: string) => {
+            try {
+              const part = tok.split('.')[1]
+              const json = JSON.parse(
+                atob(part.replace(/-/g, '+').replace(/_/g, '/')),
+              )
+              console.info(`[auth/privy] ${label} JWT payload:`, {
+                aud: json.aud,
+                iss: json.iss,
+                sub: json.sub,
+                exp: json.exp,
+                expectedFrontendAppId: import.meta.env.VITE_PRIVY_APP_ID,
+              })
+            } catch {
+              // ignore decode errors
+            }
+          }
+          debugPayload(accessToken, 'access_token')
+          debugPayload(idToken, 'identity_token')
+        }
         // loginAccount?.type 主站实测为 'email' / 'wallet' 等；两种 fallback 都加
         const method =
           (loginAccount?.type as 'email' | 'wallet' | undefined) ??
