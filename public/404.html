@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>TurboFlow Agent Portal</title>
+    <script>
+      // GitHub Pages SPA fallback：把被 404 的路径编码到 query 后重定向回 index.html，
+      // index.html 内脚本会还原为真实路径并交给 BrowserRouter 处理。
+      // 仅当 VITE_ROUTER=browser 时才会走到这段逻辑；HashRouter 部署不会进入 404。
+      (function () {
+        var segments = 1; // 与 vite.config base 层级对齐（/agent-portal-prototype/）
+        var l = window.location;
+        var path = '/' + l.pathname
+          .split('/')
+          .slice(1 + segments)
+          .join('/')
+          .replace(/&/g, '~and~');
+        l.replace(
+          l.protocol + '//' + l.hostname + (l.port ? ':' + l.port : '') +
+          l.pathname.split('/').slice(0, 1 + segments).join('/') +
+          '/?p=' + path + (l.search ? '&q=' + l.search.slice(1).replace(/&/g, '~and~') : '') +
+          l.hash
+        );
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

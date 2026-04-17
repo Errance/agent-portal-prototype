@@ -1,16 +1,39 @@
 import { useState, useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Box, Flex, Text, Tabs, HStack } from '@chakra-ui/react'
+import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
-import { dailyRevenue, commissionRecords, settlementConfig } from '@/mock/data'
+import { useDailyRevenue, useCommissionRecords, useSettlementConfig } from '@/api/queries/revenue'
 import type { DailyRevenue, CommissionRecord } from '@/mock/types'
+import { sumAmounts, fmtAmount } from '@/utils/fmtAmount'
+import { useSanitizedUrlParam } from '@/hooks/useUrlState'
+
+interface CommissionAgg {
+  total: number
+  volume: number
+  perp: number
+  event: number
+}
+
+function aggregateCommissions(list: CommissionRecord[], onlyPaid = false): CommissionAgg {
+  let total = 0, volume = 0, perp = 0, evt = 0
+  for (const r of list) {
+    volume += r.tradeVolume ?? 0
+    if (onlyPaid) {
+      if (r.payoutStatus === 'paid') total += r.commissionAmount
+    } else {
+      total += r.commissionAmount
+    }
+    if (r.productLine === 'perpetual') perp += r.commissionAmount
+    else if (r.productLine === 'event') evt += r.commissionAmount
+  }
+  return { total, volume, perp, event: evt }
+}
 
 export default function RevenueCenter() {
-  const [params] = useSearchParams()
-  const preSourceUid = params.get('source_uid') || ''
+  // S2：UID 白名单校验，非法值直接忽略
+  const preSourceUid = useSanitizedUrlParam('source_uid', /^UID\d{6,}$/)
 
   const [tab, setTab] = useState('0')
   const [productLine, setProductLine] = useState('all')
@@ -20,79 +43,79 @@ export default function RevenueCenter() {
   const [expandVolume, setExpandVolume] = useState(false)
   const [expandFee, setExpandFee] = useState(false)
 
+  const dailyQ = useDailyRevenue()
+  const recordsQ = useCommissionRecords()
+  const cfgQ = useSettlementConfig()
+  const daily = dailyQ.data ?? []
+  const records = recordsQ.data ?? []
+
   const settlementDisabled = productLine === 'event'
   const effectiveSettlement = settlementDisabled ? 'all' : settlement
 
-  const hasFilter = productLine !== 'all' || effectiveSettlement !== 'all' || dateFrom !== '' || dateTo !== '' || preSourceUid !== ''
+  const hasFilter = productLine !== 'all' || effectiveSettlement !== 'all'
+    || dateFrom !== '' || dateTo !== '' || preSourceUid !== ''
 
-  const totalCommission = commissionRecords.reduce((s, r) => r.payoutStatus === 'paid' ? s + r.commissionAmount : s, 0)
+  const totalCommission = useMemo(
+    () => aggregateCommissions(records, true).total,
+    [records],
+  )
 
   const globalBreakdown = useMemo(() => {
-    const vol = commissionRecords.reduce((s, r) => s + (r.tradeVolume ?? 0), 0)
-    const perp = commissionRecords.filter(r => r.productLine === 'perpetual').reduce((s, r) => s + r.commissionAmount, 0)
-    const evt = commissionRecords.filter(r => r.productLine === 'event').reduce((s, r) => s + r.commissionAmount, 0)
+    const a = aggregateCommissions(records)
     return [
-      { label: '总交易额', value: vol.toFixed(2), unit: 'USDT' },
-      { label: '永续合约', value: perp.toFixed(2), unit: 'USDT' },
-      { label: '事件合约', value: evt.toFixed(2), unit: 'USDT' },
+      { label: '总交易额', value: fmtAmount(a.volume), unit: 'USDT' },
+      { label: '永续合约', value: fmtAmount(a.perp), unit: 'USDT' },
+      { label: '事件合约', value: fmtAmount(a.event), unit: 'USDT' },
     ]
-  }, [])
+  }, [records])
 
   const filteredRecords = useMemo(() => {
-    let data = commissionRecords
+    let data = records
     if (preSourceUid) data = data.filter(r => r.sourceUid === preSourceUid)
     if (productLine !== 'all') data = data.filter(r => r.productLine === (productLine === 'perpetual' ? 'perpetual' : 'event'))
     if (effectiveSettlement !== 'all') data = data.filter(r => r.settlementType === effectiveSettlement)
     return data
-  }, [productLine, effectiveSettlement, preSourceUid])
+  }, [records, productLine, effectiveSettlement, preSourceUid])
 
   const filteredStatsData = useMemo(() => {
-    const total = filteredRecords.reduce((s, r) => s + r.commissionAmount, 0)
-    const vol = filteredRecords.reduce((s, r) => s + (r.tradeVolume ?? 0), 0)
-    const perp = filteredRecords.filter(r => r.productLine === 'perpetual').reduce((s, r) => s + r.commissionAmount, 0)
-    const evt = filteredRecords.filter(r => r.productLine === 'event').reduce((s, r) => s + r.commissionAmount, 0)
+    const a = aggregateCommissions(filteredRecords)
     return [
-      { label: '返佣金额', value: total.toFixed(2), unit: 'USDT' },
-      { label: '交易额', value: vol.toFixed(2), unit: 'USDT' },
-      { label: '永续合约', value: perp.toFixed(2), unit: 'USDT' },
-      { label: '事件合约', value: evt.toFixed(2), unit: 'USDT' },
+      { label: '返佣金额', value: fmtAmount(a.total), unit: 'USDT' },
+      { label: '交易额', value: fmtAmount(a.volume), unit: 'USDT' },
+      { label: '永续合约', value: fmtAmount(a.perp), unit: 'USDT' },
+      { label: '事件合约', value: fmtAmount(a.event), unit: 'USDT' },
       { label: '记录数', value: filteredRecords.length },
     ]
   }, [filteredRecords])
-
-  const fmtNum = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2 })
 
   const dailyColumns: Column<DailyRevenue>[] = useMemo(() => {
     const cols: Column<DailyRevenue>[] = [
       { key: 'date', label: '日期', render: r => <Text fontFamily="ISB" color="text.100">{r.date}</Text> },
       {
-        key: 'ffComm', label: 'FF 返佣',
-        align: 'right',
+        key: 'ffComm', label: 'FF 返佣', align: 'right',
         render: r => (
           <Box>
-            <Text color="theme" fontFamily="ISB" fontSize="14px">{r.flatFeeCommUsdt.toFixed(2)} USDT</Text>
-            <Text color="theme" fontFamily="ISB" fontSize="14px" mt="4px">{r.flatFeeCommUsdc.toFixed(2)} USDC</Text>
+            <Text color="theme" fontFamily="ISB" fontSize="14px">{fmtAmount(r.flatFeeCommUsdt)} USDT</Text>
+            <Text color="theme" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.flatFeeCommUsdc)} USDC</Text>
           </Box>
         ),
         sortable: true, sortKey: r => r.flatFeeCommUsdt,
       },
       {
-        key: 'psComm', label: 'PS 返佣',
-        align: 'right',
+        key: 'psComm', label: 'PS 返佣', align: 'right',
         render: r => (
           <Box>
-            <Text color="theme" fontFamily="ISB" fontSize="14px">{r.profitShareCommUsdt.toFixed(2)} USDT</Text>
-            <Text color="theme" fontFamily="ISB" fontSize="14px" mt="4px">{r.profitShareCommUsdc.toFixed(2)} USDC</Text>
+            <Text color="theme" fontFamily="ISB" fontSize="14px">{fmtAmount(r.profitShareCommUsdt)} USDT</Text>
+            <Text color="theme" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.profitShareCommUsdc)} USDC</Text>
           </Box>
         ),
         sortable: true, sortKey: r => r.profitShareCommUsdt,
       },
       {
-        key: 'evComm', label: '事件返佣',
-        align: 'right',
+        key: 'evComm', label: '事件返佣', align: 'right',
         render: r => (
           <Box>
-            <Text color="theme" fontFamily="ISB" fontSize="14px">{r.eventCommission.toFixed(2)} USDT</Text>
+            <Text color="theme" fontFamily="ISB" fontSize="14px">{fmtAmount(r.eventCommission)} USDT</Text>
           </Box>
         ),
         sortable: true, sortKey: r => r.eventCommission,
@@ -102,33 +125,30 @@ export default function RevenueCenter() {
     if (expandVolume) {
       cols.push(
         {
-          key: 'ffVol', label: 'FF 交易量',
-          align: 'right',
+          key: 'ffVol', label: 'FF 交易量', align: 'right',
           render: r => (
             <Box>
-              <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtNum(r.ffTradeVolUsdt)} USDT</Text>
-              <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtNum(r.ffTradeVolUsdc)} USDC</Text>
+              <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.ffTradeVolUsdt, { style: 'thousand' })} USDT</Text>
+              <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.ffTradeVolUsdc, { style: 'thousand' })} USDC</Text>
             </Box>
           ),
           sortable: true, sortKey: r => r.ffTradeVolUsdt,
         },
         {
-          key: 'psVol', label: 'PS 交易量',
-          align: 'right',
+          key: 'psVol', label: 'PS 交易量', align: 'right',
           render: r => (
             <Box>
-              <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtNum(r.psTradeVolUsdt)} USDT</Text>
-              <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtNum(r.psTradeVolUsdc)} USDC</Text>
+              <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.psTradeVolUsdt, { style: 'thousand' })} USDT</Text>
+              <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.psTradeVolUsdc, { style: 'thousand' })} USDC</Text>
             </Box>
           ),
           sortable: true, sortKey: r => r.psTradeVolUsdt,
         },
         {
-          key: 'evVol', label: '事件交易量',
-          align: 'right',
+          key: 'evVol', label: '事件交易量', align: 'right',
           render: r => (
             <Box>
-              <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtNum(r.eventTradeVolume)} USDT</Text>
+              <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.eventTradeVolume, { style: 'thousand' })} USDT</Text>
             </Box>
           ),
           sortable: true, sortKey: r => r.eventTradeVolume,
@@ -136,35 +156,37 @@ export default function RevenueCenter() {
       )
     } else {
       cols.push({
-        key: 'totalVol', label: '交易量合计 (等值USDT)',
-        align: 'right',
-        render: r => <Text fontFamily="ISB" fontSize="15px" color="text.100">{fmtNum(r.ffTradeVolUsdt + r.ffTradeVolUsdc + r.psTradeVolUsdt + r.psTradeVolUsdc + r.eventTradeVolume)}</Text>,
+        key: 'totalVol', label: '交易量合计 (等值USDT)', align: 'right',
+        render: r => (
+          <Text fontFamily="ISB" fontSize="15px" color="text.100">
+            {fmtAmount(sumAmounts([r.ffTradeVolUsdt, r.ffTradeVolUsdc, r.psTradeVolUsdt, r.psTradeVolUsdc, r.eventTradeVolume]), { style: 'thousand' })}
+          </Text>
+        ),
         sortable: true,
         sortKey: r => r.ffTradeVolUsdt + r.ffTradeVolUsdc + r.psTradeVolUsdt + r.psTradeVolUsdc + r.eventTradeVolume,
       })
     }
 
     if (expandFee) {
-      cols.push(
-        {
-          key: 'ffFee', label: 'FF 手续费',
-          align: 'right',
-          render: r => (
-            <Box>
-              <Text color="text.100" fontFamily="ISB" fontSize="14px">{r.flatFeeFeeUsdt.toFixed(2)} USDT</Text>
-              <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{r.flatFeeFeeUsdc.toFixed(2)} USDC</Text>
-            </Box>
-          ),
-          sortable: true, sortKey: r => r.flatFeeFeeUsdt,
-        }
-      )
+      cols.push({
+        key: 'ffFee', label: 'FF 手续费', align: 'right',
+        render: r => (
+          <Box>
+            <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.flatFeeFeeUsdt)} USDT</Text>
+            <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.flatFeeFeeUsdc)} USDC</Text>
+          </Box>
+        ),
+        sortable: true, sortKey: r => r.flatFeeFeeUsdt,
+      })
     } else {
       cols.push({
-        key: 'totalFee', label: 'FF 手续费合计',
-        align: 'right',
-        render: r => <Text fontFamily="ISB" fontSize="15px" color="text.100">{(r.flatFeeFeeUsdt + r.flatFeeFeeUsdc).toFixed(2)}</Text>,
-        sortable: true,
-        sortKey: r => r.flatFeeFeeUsdt + r.flatFeeFeeUsdc,
+        key: 'totalFee', label: 'FF 手续费合计', align: 'right',
+        render: r => (
+          <Text fontFamily="ISB" fontSize="15px" color="text.100">
+            {fmtAmount(sumAmounts([r.flatFeeFeeUsdt, r.flatFeeFeeUsdc]))}
+          </Text>
+        ),
+        sortable: true, sortKey: r => r.flatFeeFeeUsdt + r.flatFeeFeeUsdc,
       })
     }
 
@@ -175,7 +197,7 @@ export default function RevenueCenter() {
     return cols
   }, [expandVolume, expandFee])
 
-  const recordColumns: Column<CommissionRecord>[] = [
+  const recordColumns: Column<CommissionRecord>[] = useMemo(() => [
     {
       key: 'user', label: '来源用户',
       render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.sourceUid ?? '—'}</Text>,
@@ -193,31 +215,31 @@ export default function RevenueCenter() {
       render: r => <Text fontSize="13px" color="text.100">{r.settlementType === 'flat_fee' ? 'Flat Fee' : r.settlementType === 'profit_share' ? 'Profit Share' : '—'}</Text>,
     },
     {
-      key: 'vol', label: '交易额',
-      align: 'right',
-      render: r => <Text fontFamily="ISB" color="text.100" fontSize="14px">{r.tradeVolume !== null ? r.tradeVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }) : '—'}</Text>,
+      key: 'vol', label: '交易额', align: 'right',
+      render: r => (
+        <Text fontFamily="ISB" color="text.100" fontSize="14px">
+          {r.tradeVolume !== null ? fmtAmount(r.tradeVolume, { style: 'thousand' }) : '—'}
+        </Text>
+      ),
     },
     {
-      key: 'amt', label: '返佣金额',
-      align: 'right',
+      key: 'amt', label: '返佣金额', align: 'right',
       render: r => (
         <Box>
-          <Text color="theme" fontFamily="ISB" fontSize="14px">{r.commissionAmount.toFixed(2)} {r.settlementCoin}</Text>
+          <Text color="theme" fontFamily="ISB" fontSize="14px">{fmtAmount(r.commissionAmount)} {r.settlementCoin}</Text>
         </Box>
       ),
       sortable: true, sortKey: r => r.commissionAmount,
     },
     {
-      key: 'status', label: '状态',
-      align: 'right',
+      key: 'status', label: '状态', align: 'right',
       render: r => <StatusBadge type="payout" value={r.payoutStatus} />,
     },
     {
-      key: 'time', label: '时间',
-      align: 'right',
+      key: 'time', label: '时间', align: 'right',
       render: r => <Text fontSize="13px" color="gray.200">{r.time}</Text>,
     },
-  ]
+  ], [])
 
   const tabTrigger = (val: string, label: string) => (
     <Tabs.Trigger value={val} px="16px" py="16px" fontSize="15px"
@@ -276,7 +298,7 @@ export default function RevenueCenter() {
         <Box flexShrink={0}>
           <Text fontSize="13px" color="gray.200" mb="8px" textTransform="uppercase" letterSpacing="0.5px">累计返佣（USDT等值）</Text>
           <Text fontSize="36px" fontFamily="ISB" color="theme" lineHeight="1" textShadow="0 0 24px rgba(10,186,181,0.2)">
-            {totalCommission.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+            {fmtAmount(totalCommission, { style: 'thousand' })}
           </Text>
           <Text fontSize="12px" color="gray.100" mt="8px">返佣实时到账</Text>
         </Box>
@@ -300,20 +322,28 @@ export default function RevenueCenter() {
             {toggleBtn(expandFee ? '收起手续费明细' : '展开手续费明细', expandFee, () => setExpandFee(v => !v))}
           </Flex>
           <DataTable
-            data={dailyRevenue} columns={dailyColumns}
+            data={daily} columns={dailyColumns}
+            getRowKey={r => r.date}
+            isLoading={dailyQ.isLoading}
+            error={dailyQ.isError ? { message: (dailyQ.error as Error).message, retry: () => dailyQ.refetch() } : null}
             footer={<Text fontSize="12px" color="gray.200" mt="8px">佣金包含直推返佣和平台奖励，交易额仅统计直推用户的交易，两者不构成简单的比例关系。</Text>}
           />
         </Tabs.Content>
         <Tabs.Content value="1">
-          <DataTable data={filteredRecords} columns={recordColumns} />
+          <DataTable
+            data={filteredRecords} columns={recordColumns}
+            getRowKey={r => r.id}
+            isLoading={recordsQ.isLoading}
+            error={recordsQ.isError ? { message: (recordsQ.error as Error).message, retry: () => recordsQ.refetch() } : null}
+          />
         </Tabs.Content>
         <Tabs.Content value="2">
           <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="8px" p="32px">
             <Text fontFamily="ISB" fontSize="18px" mb="24px" color="text.100" letterSpacing="-0.5px">当前结算方式配置</Text>
             <Flex gap="48px">
-              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">结算方式</Text><Text fontSize="16px" fontFamily="ISB" color="text.100">{settlementConfig.method}</Text></Box>
-              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">结算频率</Text><Text fontSize="16px" fontFamily="ISB" color="text.100">{settlementConfig.frequency}</Text></Box>
-              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">默认结算币种</Text><Text fontSize="16px" fontFamily="ISB" color="theme">{settlementConfig.coin}</Text></Box>
+              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">结算方式</Text><Text fontSize="16px" fontFamily="ISB" color="text.100">{cfgQ.data?.method ?? '—'}</Text></Box>
+              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">结算频率</Text><Text fontSize="16px" fontFamily="ISB" color="text.100">{cfgQ.data?.frequency ?? '—'}</Text></Box>
+              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">默认结算币种</Text><Text fontSize="16px" fontFamily="ISB" color="theme">{cfgQ.data?.coin ?? '—'}</Text></Box>
             </Flex>
             <Text fontSize="13px" color="gray.200" mt="32px">结算方式由管理员在内部后台设定，代理商前台仅展示、不可修改。</Text>
           </Box>

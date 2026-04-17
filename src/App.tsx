@@ -1,13 +1,34 @@
+import { lazy, Suspense } from 'react'
 import { useRoutes } from 'react-router-dom'
+import { Box, Flex, Text } from '@chakra-ui/react'
 import { AgentProvider } from '@/context/AgentContext'
 import AppLayout from '@/components/layout/AppLayout'
-import Dashboard from '@/pages/Dashboard'
-import FriendsCenter from '@/pages/FriendsCenter'
-import RevenueCenter from '@/pages/RevenueCenter'
-import TradingCenter from '@/pages/TradingCenter'
-import InvitePromotion from '@/pages/InvitePromotion'
-import OnchainTransfers from '@/pages/OnchainTransfers'
-import NotAgent from '@/pages/NotAgent'
+
+const Dashboard = lazy(() => import('@/pages/Dashboard'))
+const FriendsCenter = lazy(() => import('@/pages/FriendsCenter'))
+const RevenueCenter = lazy(() => import('@/pages/RevenueCenter'))
+const TradingCenter = lazy(() => import('@/pages/TradingCenter'))
+const InvitePromotion = lazy(() => import('@/pages/InvitePromotion'))
+const OnchainTransfers = lazy(() => import('@/pages/OnchainTransfers'))
+const NotAgent = lazy(() => import('@/pages/NotAgent'))
+
+function PageLoader() {
+  return (
+    <Flex minH="40vh" align="center" justify="center">
+      <Box
+        w="36px"
+        h="36px"
+        border="2px solid"
+        borderColor="border.100"
+        borderTopColor="theme"
+        borderRadius="full"
+        animation="spin 0.9s linear infinite"
+        css={{ '@keyframes spin': { to: { transform: 'rotate(360deg)' } } }}
+      />
+      <Text ml={3} fontSize="13px" color="gray.200">加载中</Text>
+    </Flex>
+  )
+}
 
 const routes = [
   {
@@ -27,5 +48,9 @@ const routes = [
 
 export default function App() {
   const element = useRoutes(routes)
-  return <AgentProvider>{element}</AgentProvider>
+  return (
+    <AgentProvider>
+      <Suspense fallback={<PageLoader />}>{element}</Suspense>
+    </AgentProvider>
+  )
 }

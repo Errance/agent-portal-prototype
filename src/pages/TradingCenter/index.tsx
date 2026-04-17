@@ -6,8 +6,9 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, Input, FilterItem } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
-import { perpPositions, perpHistory, eventHistory } from '@/mock/data'
+import { usePerpPositions, usePerpHistory, useEventHistory } from '@/api/queries/trading'
 import type { PerpPosition, PerpOrder, EventOrder } from '@/mock/types'
+import { fmtAmount } from '@/utils/fmtAmount'
 
 const allPerpPosCols: Column<PerpPosition>[] = [
   {
@@ -28,24 +29,20 @@ const allPerpPosCols: Column<PerpPosition>[] = [
     render: r => <Text fontSize="13px" color={r.side === 'long' ? 'theme' : 'red.100'}>{r.side === 'long' ? '多头' : '空头'} · {r.leverage}x</Text>,
   },
   {
-    key: 'qty', label: '持仓数量',
-    align: 'right',
+    key: 'qty', label: '持仓数量', align: 'right',
     render: r => <Text fontFamily="ISB" fontSize="15px">{r.quantity.toFixed(4)}</Text>,
   },
   {
-    key: 'avgPrice', label: '开仓均价',
-    align: 'right',
-    render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.avgPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>,
+    key: 'avgPrice', label: '开仓均价', align: 'right',
+    render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{fmtAmount(r.avgPrice, { style: 'thousand' })}</Text>,
   },
   {
-    key: 'markPrice', label: '标记价格',
-    align: 'right',
-    render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.markPrice.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>,
+    key: 'markPrice', label: '标记价格', align: 'right',
+    render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{fmtAmount(r.markPrice, { style: 'thousand' })}</Text>,
   },
   {
-    key: 'pnl', label: '未实现盈亏',
-    align: 'right',
-    render: r => <Text color={r.unrealizedPnl >= 0 ? 'theme' : 'red.100'} fontFamily="ISB" fontSize="16px">{r.unrealizedPnl.toFixed(2)}</Text>,
+    key: 'pnl', label: '未实现盈亏', align: 'right',
+    render: r => <Text color={r.unrealizedPnl >= 0 ? 'theme' : 'red.100'} fontFamily="ISB" fontSize="16px">{fmtAmount(r.unrealizedPnl)}</Text>,
     sortable: true, sortKey: r => r.unrealizedPnl,
   },
 ]
@@ -74,19 +71,16 @@ const allPerpHistCols: Column<PerpOrder>[] = [
     ),
   },
   {
-    key: 'price', label: '成交价格',
-    align: 'right',
-    render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.price.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>,
+    key: 'price', label: '成交价格', align: 'right',
+    render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{fmtAmount(r.price, { style: 'thousand' })}</Text>,
   },
   {
-    key: 'qty', label: '成交数量',
-    align: 'right',
+    key: 'qty', label: '成交数量', align: 'right',
     render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.quantity.toFixed(4)}</Text>,
   },
   {
-    key: 'fee', label: '手续费',
-    align: 'right',
-    render: r => <Text fontFamily="ISB" fontSize="15px">{r.fee.toFixed(2)}</Text>,
+    key: 'fee', label: '手续费', align: 'right',
+    render: r => <Text fontFamily="ISB" fontSize="15px">{fmtAmount(r.fee)}</Text>,
     sortable: true, sortKey: r => r.fee,
   },
   {
@@ -114,23 +108,20 @@ const allEventCols: Column<EventOrder>[] = [
     render: r => <Text fontSize="13px" color={r.direction === '看涨' ? 'theme' : 'red.100'}>{r.direction}</Text>,
   },
   {
-    key: 'amt', label: '投注金额',
-    align: 'right',
-    render: r => <Text fontFamily="ISB" fontSize="15px">{r.amount.toFixed(2)}</Text>,
+    key: 'amt', label: '投注金额', align: 'right',
+    render: r => <Text fontFamily="ISB" fontSize="15px">{fmtAmount(r.amount)}</Text>,
     sortable: true, sortKey: r => r.amount,
   },
   {
-    key: 'result', label: '结算结果',
-    align: 'right',
+    key: 'result', label: '结算结果', align: 'right',
     render: r => <StatusBadge type="eventResult" value={r.result} />,
   },
   {
-    key: 'pnl', label: '盈亏',
-    align: 'right',
+    key: 'pnl', label: '盈亏', align: 'right',
     render: r => (
       r.result !== 'pending' ? (
         <Text color={r.pnl >= 0 ? 'theme' : 'red.100'} fontFamily="ISB" fontSize="15px">
-          {r.pnl >= 0 ? '+' : ''}{r.pnl.toFixed(2)}
+          {r.pnl >= 0 ? '+' : ''}{fmtAmount(r.pnl)}
         </Text>
       ) : <Text color="gray.200">—</Text>
     ),
@@ -141,26 +132,46 @@ const allEventCols: Column<EventOrder>[] = [
   },
 ]
 
-function computeStatsForTab(tab: string, positions: PerpPosition[], orders: PerpOrder[], events: EventOrder[]) {
-  if (tab === '0') {
-    return [
-      { label: '持仓数', value: positions.length },
-      { label: '持仓市值', value: positions.reduce((s, r) => s + r.quantity * r.markPrice, 0).toFixed(2), unit: 'USDT' },
-      { label: '未实现盈亏', value: positions.reduce((s, r) => s + r.unrealizedPnl, 0).toFixed(2), unit: 'USDT' },
-    ]
-  } else if (tab === '1') {
-    return [
-      { label: '订单数', value: orders.length },
-      { label: '交易量', value: orders.reduce((s, r) => s + r.price * r.quantity, 0).toFixed(2), unit: 'USDT' },
-      { label: '手续费', value: orders.reduce((s, r) => s + r.fee, 0).toFixed(2), unit: 'USDT' },
-    ]
-  } else {
-    return [
-      { label: '订单数', value: events.length },
-      { label: '下注额', value: events.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
-      { label: '盈亏', value: events.reduce((s, r) => s + r.pnl, 0).toFixed(2), unit: 'USDT' },
-    ]
+/**
+ * 单次 reduce 聚合（见审计 P5），替代多次 reduce 链。
+ */
+function statsForPositions(list: PerpPosition[]) {
+  let marketValue = 0, upnl = 0
+  for (const r of list) {
+    marketValue += r.quantity * r.markPrice
+    upnl += r.unrealizedPnl
   }
+  return [
+    { label: '持仓数', value: list.length },
+    { label: '持仓市值', value: fmtAmount(marketValue), unit: 'USDT' },
+    { label: '未实现盈亏', value: fmtAmount(upnl), unit: 'USDT' },
+  ]
+}
+
+function statsForOrders(list: PerpOrder[]) {
+  let volume = 0, fee = 0
+  for (const r of list) {
+    volume += r.price * r.quantity
+    fee += r.fee
+  }
+  return [
+    { label: '订单数', value: list.length },
+    { label: '交易量', value: fmtAmount(volume), unit: 'USDT' },
+    { label: '手续费', value: fmtAmount(fee), unit: 'USDT' },
+  ]
+}
+
+function statsForEvents(list: EventOrder[]) {
+  let amount = 0, pnl = 0
+  for (const r of list) {
+    amount += r.amount
+    pnl += r.pnl
+  }
+  return [
+    { label: '订单数', value: list.length },
+    { label: '下注额', value: fmtAmount(amount), unit: 'USDT' },
+    { label: '盈亏', value: fmtAmount(pnl), unit: 'USDT' },
+  ]
 }
 
 export default function TradingCenter() {
@@ -174,6 +185,13 @@ export default function TradingCenter() {
   const [subType, setSubType] = useState('all')
   const [hiddenCols, setHiddenCols] = useState<Set<string>>(new Set())
   const [showColPicker, setShowColPicker] = useState(false)
+
+  const perpPosQ = usePerpPositions()
+  const perpHistQ = usePerpHistory()
+  const eventQ = useEventHistory()
+  const perpPositions = perpPosQ.data ?? []
+  const perpHistory = perpHistQ.data ?? []
+  const eventHistory = eventQ.data ?? []
 
   if (tradeVisibility === 'hidden') return <Navigate to="/" replace />
 
@@ -189,17 +207,21 @@ export default function TradingCenter() {
     return res
   }
 
-  const filteredPerpPos = useMemo(() => filterFn(perpPositions), [uid, remark])
-  const filteredPerpHist = useMemo(() => filterFn(perpHistory), [uid, remark])
-  const filteredEvent = useMemo(() => filterFn(eventHistory), [uid, remark])
+  const filteredPerpPos = useMemo(() => filterFn(perpPositions), [perpPositions, uid, remark])
+  const filteredPerpHist = useMemo(() => filterFn(perpHistory), [perpHistory, uid, remark])
+  const filteredEvent = useMemo(() => filterFn(eventHistory), [eventHistory, uid, remark])
 
-  const globalStatsForTab = useMemo(() =>
-    computeStatsForTab(tab, perpPositions, perpHistory, eventHistory),
-  [tab])
+  const globalStatsForTab = useMemo(() => {
+    if (tab === '0') return statsForPositions(perpPositions)
+    if (tab === '1') return statsForOrders(perpHistory)
+    return statsForEvents(eventHistory)
+  }, [tab, perpPositions, perpHistory, eventHistory])
 
-  const filteredStatsForTab = useMemo(() =>
-    computeStatsForTab(tab, filteredPerpPos, filteredPerpHist, filteredEvent),
-  [tab, filteredPerpPos, filteredPerpHist, filteredEvent])
+  const filteredStatsForTab = useMemo(() => {
+    if (tab === '0') return statsForPositions(filteredPerpPos)
+    if (tab === '1') return statsForOrders(filteredPerpHist)
+    return statsForEvents(filteredEvent)
+  }, [tab, filteredPerpPos, filteredPerpHist, filteredEvent])
 
   const tabTrigger = (val: string, label: string) => (
     <Tabs.Trigger value={val} px="16px" py="16px" fontSize="15px"
@@ -223,7 +245,13 @@ export default function TradingCenter() {
         </Box>
         <Box>
           <Text fontSize="13px" color="gray.100" textTransform="uppercase" letterSpacing="0.5px" mb="8px">总交易额（USDT）</Text>
-          <Text fontSize="32px" fontFamily="ISB" color="text.100" lineHeight="1">{(perpHistory.reduce((s, r) => s + r.price * r.quantity, 0) + eventHistory.reduce((s, r) => s + r.amount, 0)).toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>
+          <Text fontSize="32px" fontFamily="ISB" color="text.100" lineHeight="1">
+            {fmtAmount(
+              perpHistory.reduce((s, r) => s + r.price * r.quantity, 0)
+              + eventHistory.reduce((s, r) => s + r.amount, 0),
+              { style: 'thousand' },
+            )}
+          </Text>
         </Box>
       </Flex>
       <Text fontSize="13px" color="gray.200" mt="24px">当前数据可见深度为"汇总"，具体持仓和盈亏明细不可见。</Text>
@@ -253,14 +281,13 @@ export default function TradingCenter() {
                       <Flex key={col.key} align="center" gap="12px" py="4px" cursor="pointer"
                         onClick={() => setHiddenCols(prev => {
                           const next = new Set(prev)
-                          next.has(col.key) ? next.delete(col.key) : next.add(col.key)
+                          if (next.has(col.key)) next.delete(col.key); else next.add(col.key)
                           return next
                         })}>
                         <Box w="16px" h="16px" borderRadius="4px" border="1px solid"
                           borderColor={hiddenCols.has(col.key) ? 'border.100' : 'theme'}
                           bg={hiddenCols.has(col.key) ? 'transparent' : 'rgba(10,186,181,0.1)'}
-                          display="flex" alignItems="center" justifyContent="center"
-                        >
+                          display="flex" alignItems="center" justifyContent="center">
                           {!hiddenCols.has(col.key) && <Text fontSize="10px" color="theme">✓</Text>}
                         </Box>
                         <Text fontSize="13px" color={hiddenCols.has(col.key) ? 'gray.100' : 'text.100'}>
@@ -316,13 +343,37 @@ export default function TradingCenter() {
             {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStatsForTab} />}
 
             <Tabs.Content value="0">
-              {tab === '0' && <DataTable data={filteredPerpPos} columns={allPerpPosCols.filter(c => !hiddenCols.has(c.key))} />}
+              {tab === '0' && (
+                <DataTable
+                  data={filteredPerpPos}
+                  columns={allPerpPosCols.filter(c => !hiddenCols.has(c.key))}
+                  getRowKey={(r, i) => `${r.uid}-${r.pair}-${i}`}
+                  isLoading={perpPosQ.isLoading}
+                  error={perpPosQ.isError ? { message: (perpPosQ.error as Error).message, retry: () => perpPosQ.refetch() } : null}
+                />
+              )}
             </Tabs.Content>
             <Tabs.Content value="1">
-              {tab === '1' && <DataTable data={filteredPerpHist} columns={allPerpHistCols.filter(c => !hiddenCols.has(c.key))} />}
+              {tab === '1' && (
+                <DataTable
+                  data={filteredPerpHist}
+                  columns={allPerpHistCols.filter(c => !hiddenCols.has(c.key))}
+                  getRowKey={(r, i) => `${r.uid}-${r.time}-${i}`}
+                  isLoading={perpHistQ.isLoading}
+                  error={perpHistQ.isError ? { message: (perpHistQ.error as Error).message, retry: () => perpHistQ.refetch() } : null}
+                />
+              )}
             </Tabs.Content>
             <Tabs.Content value="2">
-              {tab === '2' && <DataTable data={filteredEvent} columns={allEventCols.filter(c => !hiddenCols.has(c.key))} />}
+              {tab === '2' && (
+                <DataTable
+                  data={filteredEvent}
+                  columns={allEventCols.filter(c => !hiddenCols.has(c.key))}
+                  getRowKey={(r, i) => `${r.uid}-${r.time}-${i}`}
+                  isLoading={eventQ.isLoading}
+                  error={eventQ.isError ? { message: (eventQ.error as Error).message, retry: () => eventQ.refetch() } : null}
+                />
+              )}
             </Tabs.Content>
           </Tabs.Root>
         </>

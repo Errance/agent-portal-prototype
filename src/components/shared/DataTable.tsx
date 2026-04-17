@@ -1,6 +1,8 @@
 import { useState, useMemo, type ReactNode } from 'react'
 import { Box, Flex, Text, Table, HStack } from '@chakra-ui/react'
 import EmptyState from './EmptyState'
+import TableSkeleton from './TableSkeleton'
+import ErrorState from './ErrorState'
 
 export interface Column<T> {
   key: string
@@ -13,6 +15,11 @@ export interface Column<T> {
   align?: 'left' | 'center' | 'right'
 }
 
+export interface DataTableError {
+  message: string
+  retry?: () => void
+}
+
 interface DataTableProps<T> {
   data: T[]
   columns: Column<T>[]
@@ -20,10 +27,16 @@ interface DataTableProps<T> {
   footer?: ReactNode
   maxH?: string
   stickyRight?: boolean
+  /** 必填：稳定行 key，接入真实 API / 排序 / 分页时避免 React 复用错行。 */
+  getRowKey: (row: T, index: number) => string
+  isLoading?: boolean
+  error?: DataTableError | null
+  emptyText?: string
 }
 
 export default function DataTable<T>({
   data, columns, pageSize = 10, footer, maxH, stickyRight,
+  getRowKey, isLoading, error, emptyText,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1)
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -50,7 +63,9 @@ export default function DataTable<T>({
     else { setSortKey(key); setSortAsc(true) }
   }
 
-  if (data.length === 0) return <EmptyState />
+  if (error) return <ErrorState message={error.message} onRetry={error.retry} />
+  if (isLoading) return <TableSkeleton rows={pageSize} cols={columns.length} />
+  if (data.length === 0) return <EmptyState text={emptyText} />
 
   return (
     <Box>
@@ -99,7 +114,7 @@ export default function DataTable<T>({
           <Table.Body>
             {sliced.map((row, ri) => (
               <Table.Row
-                key={ri}
+                key={getRowKey(row, ri)}
                 bg="transparent"
                 transition="background 0.2s"
                 _hover={{ bg: 'rgba(0,0,0,0.02)' }}
@@ -120,7 +135,7 @@ export default function DataTable<T>({
                       position: 'sticky' as const, right: 0,
                       bg: 'bg.200',
                       boxShadow: '-8px 0 16px rgba(0,0,0,0.04)',
-                      _groupHover: { bg: 'bg.100' } // Fallback for hover state if supported
+                      _groupHover: { bg: 'bg.100' },
                     } : {})}
                   >
                     {col.render(row, ri)}

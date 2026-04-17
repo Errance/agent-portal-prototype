@@ -3,9 +3,8 @@ import { Link } from 'react-router-dom'
 import StatCard from '@/components/shared/StatCard'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import { useAgent } from '@/context/AgentContext'
-import { dashboardKPI, inviteCodeSummary } from '@/mock/data'
-import type { InviteCodeSummary } from '@/mock/types'
-import type { AgentLevel } from '@/mock/types'
+import { useDashboardKpi, useInviteCodeSummary } from '@/api/queries/dashboard'
+import type { InviteCodeSummary, AgentLevel } from '@/mock/types'
 
 const LEVEL_CONFIG: Record<AgentLevel, { name: string; bg: string; color: string; border: string; glow: string }> = {
   1: { name: '青铜', bg: '#F4F5F7', color: '#57585C', border: '#DEDFE0', glow: 'none' },
@@ -14,6 +13,8 @@ const LEVEL_CONFIG: Record<AgentLevel, { name: string; bg: string; color: string
   4: { name: '钻石', bg: 'linear-gradient(135deg, #E0F2FE 0%, #0ABAB5 100%)', color: '#003A38', border: '#0ABAB5', glow: '0 4px 12px rgba(10,186,181,0.3)' },
   5: { name: '星耀', bg: 'linear-gradient(135deg, #F3E8FF 0%, #A855F7 100%)', color: '#3B0764', border: '#9333EA', glow: '0 4px 12px rgba(168,85,247,0.3)' },
 }
+
+const LEVEL_FALLBACK = LEVEL_CONFIG[1]
 
 const columns: Column<InviteCodeSummary>[] = [
   { key: 'code', label: '推广码', render: r => <Text color="theme" fontFamily="ISB" fontSize="15px">{r.code}</Text> },
@@ -25,7 +26,10 @@ const columns: Column<InviteCodeSummary>[] = [
 
 export default function Dashboard() {
   const { isNewAgent, setIsNewAgent, agentName, agentLevel } = useAgent()
-  const levelStyle = LEVEL_CONFIG[agentLevel]
+  const levelStyle = LEVEL_CONFIG[agentLevel] ?? LEVEL_FALLBACK
+
+  const kpiQ = useDashboardKpi()
+  const summaryQ = useInviteCodeSummary()
 
   return (
     <Box>
@@ -52,40 +56,23 @@ export default function Dashboard() {
       </Text>
 
       {isNewAgent && (
-        <Box
-          bg="bg.200"
-          border="1px solid"
-          borderColor="border.100"
-          borderRadius="8px"
-          p="24px"
-          mb="32px"
-        >
+        <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="8px" p="24px" mb="32px">
           <Text fontFamily="ISB" fontSize="18px" color="text.100" mb="8px" letterSpacing="-0.5px">开启您的推广之旅</Text>
-          <Text fontSize="14px" color="gray.100" mb="20px">
-            创建您的第一个推广码，开始发展下级用户并获取返佣收益。
-          </Text>
+          <Text fontSize="14px" color="gray.100" mb="20px">创建您的第一个推广码，开始发展下级用户并获取返佣收益。</Text>
           <HStack gap="12px">
             <Link to="/invite">
-              <Box
-                as="button"
-                px="24px" py="10px"
-                bg="theme" color="#FFFFFF"
+              <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF"
                 borderRadius="4px" fontSize="13px" fontFamily="ISB"
                 cursor="pointer" transition="all 0.2s"
-                _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}
-              >
+                _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>
                 创建推广码
               </Box>
             </Link>
-            <Box
-              as="button"
-              px="24px" py="10px"
-              bg="transparent" color="text.100"
+            <Box as="button" px="24px" py="10px" bg="transparent" color="text.100"
               border="1px solid" borderColor="border.100"
-              borderRadius="4px" fontSize="13px"
-              cursor="pointer" onClick={() => setIsNewAgent(false)}
-              transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}
-            >
+              borderRadius="4px" fontSize="13px" cursor="pointer"
+              onClick={() => setIsNewAgent(false)}
+              transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>
               我知道了
             </Box>
           </HStack>
@@ -93,7 +80,13 @@ export default function Dashboard() {
       )}
 
       <Grid templateColumns="repeat(auto-fill, minmax(260px, 1fr))" gap="24px" mb="48px">
-        {dashboardKPI.map(kpi => (
+        {kpiQ.isLoading && Array.from({ length: 6 }).map((_, i) => (
+          <StatCard key={i} label="" value="" isLoading />
+        ))}
+        {kpiQ.isError && !kpiQ.isLoading && (
+          <StatCard label="加载失败" value="" error={(kpiQ.error as Error).message} />
+        )}
+        {kpiQ.data?.map(kpi => (
           <StatCard
             key={kpi.label}
             label={kpi.label}
@@ -108,20 +101,23 @@ export default function Dashboard() {
         <Flex justify="space-between" align="center" mb="24px">
           <Text fontFamily="ISB" fontSize="20px" color="text.100" letterSpacing="-0.5px">推广概览</Text>
           <Link to="/invite">
-            <Box
-              as="button"
-              px="20px" py="8px"
-              bg="transparent" color="text.100"
+            <Box as="button" px="20px" py="8px" bg="transparent" color="text.100"
               border="1px solid" borderColor="border.100"
               borderRadius="4px" fontSize="13px" fontFamily="ISB"
               cursor="pointer" transition="all 0.2s"
-              _hover={{ bg: 'bg.200', borderColor: 'border.200' }}
-            >
+              _hover={{ bg: 'bg.200', borderColor: 'border.200' }}>
               管理推广码
             </Box>
           </Link>
         </Flex>
-        <DataTable data={inviteCodeSummary} columns={columns} pageSize={10} />
+        <DataTable
+          data={summaryQ.data ?? []}
+          columns={columns}
+          pageSize={10}
+          getRowKey={r => r.code}
+          isLoading={summaryQ.isLoading}
+          error={summaryQ.isError ? { message: (summaryQ.error as Error).message, retry: () => summaryQ.refetch() } : null}
+        />
       </Box>
     </Box>
   )

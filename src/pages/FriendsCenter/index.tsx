@@ -1,30 +1,67 @@
-import { useState, useMemo } from 'react'
-import { Box, Flex, Text, Tabs, HStack } from '@chakra-ui/react'
+import { useMemo, useState } from 'react'
+import { Box, Flex, Text, Tabs } from '@chakra-ui/react'
 import { Link } from 'react-router-dom'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, FilterItem } from '@/components/shared/FilterBar'
+import PillButton from '@/components/shared/PillButton'
+import ModalShell from '@/components/shared/ModalShell'
+import RateFormInput from '@/components/shared/RateFormInput'
 import { useAgent } from '@/context/AgentContext'
-import { invitees, subAgents } from '@/mock/data'
+import { useInvitees, useSubAgents } from '@/api/queries/friends'
 import type { Invitee, SubAgent } from '@/mock/types'
+import { sumAmounts, fmtAmount } from '@/utils/fmtAmount'
+import { validateRate, type RateErrors } from '@/utils/validateRate'
+import Decimal from 'decimal.js-light'
 
-const globalStats = [
-  { label: '注册人数', value: invitees.filter(u => !u.isSelf).length },
-  { label: '已充值', value: invitees.filter(u => !u.isSelf && u.depositStatus === 'deposited').length },
-  { label: '已交易', value: invitees.filter(u => !u.isSelf && u.tradeStatus === 'traded').length },
-]
+interface InviteeAggregate {
+  count: number
+  deposited: number
+  traded: number
+}
 
-const subAgentGlobalStats = [
-  { label: '子代理总数', value: subAgents.length, unit: '人' },
-  { label: '子代理返佣(USDT)', value: subAgents.reduce((s, a) => s + a.directCommUsdt, 0).toFixed(2), unit: 'USDT' },
-  { label: '子代理返佣(USDC)', value: subAgents.reduce((s, a) => s + a.directCommUsdc, 0).toFixed(2), unit: 'USDC' },
-  { label: '平台奖励(USDT)', value: subAgents.reduce((s, a) => s + a.platformRewardUsdt, 0).toFixed(2), unit: 'USDT' },
-  { label: '平台奖励(USDC)', value: subAgents.reduce((s, a) => s + a.platformRewardUsdc, 0).toFixed(2), unit: 'USDC' },
-]
+/**
+ * 单次 reduce 聚合 Invitee 统计（见审计 P5）。
+ */
+function aggregateInvitees(list: Invitee[]): InviteeAggregate {
+  let count = 0, deposited = 0, traded = 0
+  for (const u of list) {
+    if (u.isSelf) continue
+    count++
+    if (u.depositStatus === 'deposited') deposited++
+    if (u.tradeStatus === 'traded') traded++
+  }
+  return { count, deposited, traded }
+}
+
+interface SubAgentAggregate {
+  total: number
+  directUsdt: Decimal
+  directUsdc: Decimal
+  rewardUsdt: Decimal
+  rewardUsdc: Decimal
+}
+
+function aggregateSubAgents(list: SubAgent[]): SubAgentAggregate {
+  let directUsdt = new Decimal(0), directUsdc = new Decimal(0)
+  let rewardUsdt = new Decimal(0), rewardUsdc = new Decimal(0)
+  for (const a of list) {
+    directUsdt = directUsdt.plus(a.directCommUsdt)
+    directUsdc = directUsdc.plus(a.directCommUsdc)
+    rewardUsdt = rewardUsdt.plus(a.platformRewardUsdt)
+    rewardUsdc = rewardUsdc.plus(a.platformRewardUsdc)
+  }
+  return { total: list.length, directUsdt, directUsdc, rewardUsdt, rewardUsdc }
+}
 
 export default function FriendsCenter() {
   const { selfRebateEnabled, isFrozen, currentFlatFeeRate, currentProfitShareRate, currentEventRate } = useAgent()
+  const inviteesQ = useInvitees()
+  const subAgentsQ = useSubAgents()
+  const invitees = inviteesQ.data ?? []
+  const subAgents = subAgentsQ.data ?? []
+
   const [tab, setTab] = useState('0')
   const [idFilter, setIdFilter] = useState('all')
   const [editUid, setEditUid] = useState<string | null>(null)
@@ -35,27 +72,48 @@ export default function FriendsCenter() {
   const [editFF, setEditFF] = useState('')
   const [editPS, setEditPS] = useState('')
   const [editEvent, setEditEvent] = useState('')
-  const [rateErrors, setRateErrors] = useState<Record<string, string>>({})
+  const [rateErrors, setRateErrors] = useState<RateErrors>({})
 
   const hasFilter = idFilter !== 'all'
 
-  const filteredInvitees = invitees.filter(u => {
+  const filteredInvitees = useMemo(() => invitees.filter(u => {
     if (!selfRebateEnabled && u.isSelf) return false
     if (idFilter === 'regular' && u.identityType !== 'regular') return false
-    if (idFilter === 'sub_agent' && u.identityType !== 'sub_agent' && !u.isSelf) return false
+    // 修复 S3：SELF 仅在自返佣开关开启时保留；其余用户按 identityType 严格过滤
+    if (idFilter === 'sub_agent' && u.identityType !== 'sub_agent') return false
     return true
-  })
+  }), [invitees, selfRebateEnabled, idFilter])
+
+  const globalStats = useMemo(() => {
+    const a = aggregateInvitees(invitees)
+    return [
+      { label: '注册人数', value: a.count },
+      { label: '已充值', value: a.deposited },
+      { label: '已交易', value: a.traded },
+    ]
+  }, [invitees])
+
+  const subAgentGlobalStats = useMemo(() => {
+    const a = aggregateSubAgents(subAgents)
+    return [
+      { label: '子代理总数', value: a.total, unit: '人' },
+      { label: '子代理返佣(USDT)', value: fmtAmount(a.directUsdt), unit: 'USDT' },
+      { label: '子代理返佣(USDC)', value: fmtAmount(a.directUsdc), unit: 'USDC' },
+      { label: '平台奖励(USDT)', value: fmtAmount(a.rewardUsdt), unit: 'USDT' },
+      { label: '平台奖励(USDC)', value: fmtAmount(a.rewardUsdc), unit: 'USDC' },
+    ]
+  }, [subAgents])
 
   const filteredStats = useMemo(() => {
-    const nonSelf = filteredInvitees.filter(u => !u.isSelf)
+    const a = aggregateInvitees(filteredInvitees)
     return [
-      { label: '人数', value: nonSelf.length, unit: '人' },
-      { label: '已充值', value: nonSelf.filter(u => u.depositStatus === 'deposited').length, unit: '人' },
-      { label: '已交易', value: nonSelf.filter(u => u.tradeStatus === 'traded').length, unit: '人' },
+      { label: '人数', value: a.count, unit: '人' },
+      { label: '已充值', value: a.deposited, unit: '人' },
+      { label: '已交易', value: a.traded, unit: '人' },
     ]
   }, [filteredInvitees])
 
-  const inviteeColumns: Column<Invitee>[] = [
+  const inviteeColumns: Column<Invitee>[] = useMemo(() => [
     {
       key: 'user', label: '用户 (UID)',
       render: r => (
@@ -68,7 +126,7 @@ export default function FriendsCenter() {
           </Text>
           {r.isSelf && selfRebateEnabled && (
             <Text fontSize="12px" color="gray.100" mt="2px">
-              自返佣: {r.selfRebateAmount?.toFixed(2)} USDT
+              自返佣: {fmtAmount(r.selfRebateAmount ?? 0)} USDT
             </Text>
           )}
         </Box>
@@ -84,46 +142,39 @@ export default function FriendsCenter() {
       ),
     },
     {
-      key: 'ffComm', label: 'FF 返佣',
-      align: 'right',
+      key: 'ffComm', label: 'FF 返佣', align: 'right',
       render: r => r.isSelf ? '—' : (
         <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px">{r.flatFeeCommUsdt.toFixed(2)} USDT</Text>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{r.flatFeeCommUsdc.toFixed(2)} USDC</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.flatFeeCommUsdt)} USDT</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.flatFeeCommUsdc)} USDC</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.flatFeeCommUsdt,
-      minW: '140px',
+      sortable: true, sortKey: r => r.flatFeeCommUsdt, minW: '140px',
     },
     {
-      key: 'psComm', label: 'PS 返佣',
-      align: 'right',
+      key: 'psComm', label: 'PS 返佣', align: 'right',
       render: r => r.isSelf ? '—' : (
         <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px">{r.profitShareCommUsdt.toFixed(2)} USDT</Text>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{r.profitShareCommUsdc.toFixed(2)} USDC</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.profitShareCommUsdt)} USDT</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.profitShareCommUsdc)} USDC</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.profitShareCommUsdt,
-      minW: '140px',
+      sortable: true, sortKey: r => r.profitShareCommUsdt, minW: '140px',
     },
     {
-      key: 'evComm', label: '事件返佣',
-      align: 'right',
+      key: 'evComm', label: '事件返佣', align: 'right',
       render: r => r.isSelf ? '—' : (
         <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px">{r.eventCommission.toFixed(2)} USDT</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.eventCommission)} USDT</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.eventCommission,
-      minW: '120px',
+      sortable: true, sortKey: r => r.eventCommission, minW: '120px',
     },
     {
-      key: 'totalComm', label: '总返佣(等值)',
-      align: 'right',
+      key: 'totalComm', label: '总返佣(等值)', align: 'right',
       render: r => r.isSelf ? '—' : (
         <Text fontFamily="ISB" color="theme" fontSize="16px">
-          {(r.flatFeeCommUsdt + r.flatFeeCommUsdc + r.profitShareCommUsdt + r.profitShareCommUsdc + r.eventCommission).toFixed(2)}
+          {fmtAmount(sumAmounts([r.flatFeeCommUsdt, r.flatFeeCommUsdc, r.profitShareCommUsdt, r.profitShareCommUsdc, r.eventCommission]))}
         </Text>
       ),
       sortable: true,
@@ -137,49 +188,40 @@ export default function FriendsCenter() {
           <Text color="text.100">{remarks[r.uid] || r.remark || '—'}</Text>
           {!r.isSelf && (
             <Box mt="6px">
-              <Box
-                as="button" px="10px" py="2px" borderRadius="full" fontSize="11px" fontFamily="ISB"
-                bg="bg.200" border="1px solid" borderColor="border.200"
-                color={isFrozen ? 'gray.200' : 'text.100'} cursor={isFrozen ? 'not-allowed' : 'pointer'}
+              <PillButton
+                variant="neutral"
+                disabled={isFrozen}
                 onClick={() => {
-                  if (isFrozen) return
                   setEditUid(r.uid)
                   setEditVal(remarks[r.uid] || r.remark)
                 }}
-                transition="all 0.2s" _hover={isFrozen ? {} : { bg: 'bg.300' }}
               >
                 编辑备注
-              </Box>
+              </PillButton>
             </Box>
           )}
         </Box>
       ),
     },
-  ]
-
-  const validateRate = () => {
-    const e: Record<string, string> = {}
-    const f = parseFloat(editFF); const p = parseFloat(editPS); const ev = parseFloat(editEvent)
-    if (!editFF || isNaN(f)) e.ff = '请输入'
-    else if (f <= 0) e.ff = '必须大于 0'
-    else if (f >= currentFlatFeeRate) e.ff = `必须 < ${currentFlatFeeRate}%`
-    if (!editPS || isNaN(p)) e.ps = '请输入'
-    else if (p <= 0) e.ps = '必须大于 0'
-    else if (p >= currentProfitShareRate) e.ps = `必须 < ${currentProfitShareRate}%`
-    if (!editEvent || isNaN(ev)) e.event = '请输入'
-    else if (ev <= 0) e.event = '必须大于 0'
-    else if (ev >= currentEventRate) e.event = `必须 < ${currentEventRate}%`
-    setRateErrors(e)
-    return Object.keys(e).length === 0
-  }
+  ], [selfRebateEnabled, remarks, isFrozen])
 
   const handleSaveRate = () => {
-    if (!validateRate() || !editRateAgent) return
+    const r = validateRate({ flatFee: editFF, profitShare: editPS, event: editEvent }, {
+      flatFeeRate: currentFlatFeeRate,
+      profitShareRate: currentProfitShareRate,
+      eventRate: currentEventRate,
+    })
+    if (!r.ok) {
+      setRateErrors(r.errors)
+      return
+    }
+    if (!editRateAgent) return
+    setRateErrors({})
     setEditRateAgent(null)
     setEditFF(''); setEditPS(''); setEditEvent('')
   }
 
-  const subAgentColumns: Column<SubAgent>[] = [
+  const subAgentColumns: Column<SubAgent>[] = useMemo(() => [
     {
       key: 'user', label: '子代理',
       render: r => (
@@ -205,61 +247,49 @@ export default function FriendsCenter() {
       sortable: true, sortKey: r => r.eventRate,
     },
     {
-      key: 'direct', label: '子代理返佣',
-      align: 'right',
+      key: 'direct', label: '子代理返佣', align: 'right',
       render: r => (
         <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px">{r.directCommUsdt.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT</Text>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{r.directCommUsdc.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.directCommUsdt, { style: 'thousand' })} USDT</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.directCommUsdc, { style: 'thousand' })} USDC</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.directCommUsdt,
-      minW: '160px',
+      sortable: true, sortKey: r => r.directCommUsdt, minW: '160px',
     },
     {
-      key: 'reward', label: '平台奖励',
-      align: 'right',
+      key: 'reward', label: '平台奖励', align: 'right',
       render: r => (
         <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px">{r.platformRewardUsdt.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDT</Text>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{r.platformRewardUsdc.toLocaleString('en-US', { minimumFractionDigits: 2 })} USDC</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.platformRewardUsdt, { style: 'thousand' })} USDT</Text>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.platformRewardUsdc, { style: 'thousand' })} USDC</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.platformRewardUsdt,
-      minW: '160px',
+      sortable: true, sortKey: r => r.platformRewardUsdt, minW: '160px',
     },
     {
-      key: 'action', label: '操作',
-      align: 'right',
+      key: 'action', label: '操作', align: 'right',
       render: r => (
         <Flex gap="8px" justify="flex-end">
-          <Box
-            as="button" px="12px" py="4px" borderRadius="full" fontSize="12px" fontFamily="ISB"
-            bg="bg.200" border="1px solid" borderColor="border.200" color={isFrozen ? 'gray.200' : 'text.100'}
-            cursor={isFrozen ? 'not-allowed' : 'pointer'}
+          <PillButton
+            variant="neutral" disabled={isFrozen}
             onClick={() => {
-              if (isFrozen) return
               setEditRateAgent(r)
               setEditFF(r.flatFeeRate.toFixed(2))
               setEditPS(r.profitShareRate.toFixed(4))
               setEditEvent(r.eventRate.toFixed(2))
+              setRateErrors({})
             }}
-            transition="all 0.2s" _hover={isFrozen ? {} : { bg: 'bg.300' }}
           >
             修改比例
-          </Box>
+          </PillButton>
           <Link to={`/revenue?source_uid=${r.uid}`}>
-            <Box as="button" px="12px" py="4px" borderRadius="full" fontSize="12px" fontFamily="ISB"
-              bg="rgba(10,186,181,0.1)" color="theme" cursor="pointer"
-              transition="all 0.2s" _hover={{ bg: 'rgba(10,186,181,0.2)' }}>
-              贡献明细
-            </Box>
+            <PillButton variant="primary">贡献明细</PillButton>
           </Link>
         </Flex>
       ),
       width: '1%',
     },
-  ]
+  ], [isFrozen])
 
   const tabTrigger = (val: string, label: string) => (
     <Tabs.Trigger value={val} px="16px" py="16px" fontSize="15px"
@@ -271,21 +301,6 @@ export default function FriendsCenter() {
       transition="all 0.2s">
       {label}
     </Tabs.Trigger>
-  )
-
-  const rateFormInput = (label: string, val: string, onChange: (v: string) => void, step: string, error?: string, extra?: string) => (
-    <Box>
-      <Text fontSize="12px" color="gray.100" mb="8px" textTransform="uppercase" letterSpacing="0.5px">
-        {label}{extra && <Text as="span" color="gray.200"> {extra}</Text>}
-      </Text>
-      <Box as="input" w="100%" h="40px" bg="bg.200" border="1px solid"
-        borderColor={error ? 'red.100' : 'border.100'} borderRadius="4px" px={3}
-        fontSize="14px" color="text.100" outline="none" type="number" step={step}
-        value={val} onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
-        transition="all 0.2s"
-        _focus={{ borderColor: error ? 'red.100' : 'theme', boxShadow: error ? 'none' : '0 0 0 1px rgba(10,186,181,0.5)' }} />
-      {error && <Text fontSize="12px" color="red.100" mt="4px">{error}</Text>}
-    </Box>
   )
 
   return (
@@ -310,70 +325,71 @@ export default function FriendsCenter() {
 
           {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStats} />}
 
-          <DataTable data={filteredInvitees} columns={inviteeColumns} />
+          <DataTable
+            data={filteredInvitees}
+            columns={inviteeColumns}
+            getRowKey={r => r.uid}
+            isLoading={inviteesQ.isLoading}
+            error={inviteesQ.isError ? { message: (inviteesQ.error as Error).message, retry: () => inviteesQ.refetch() } : null}
+          />
         </Tabs.Content>
 
         <Tabs.Content value="1">
           <InlineStatsBar stats={subAgentGlobalStats} />
-          <DataTable data={subAgents} columns={subAgentColumns} />
+          <DataTable
+            data={subAgents}
+            columns={subAgentColumns}
+            getRowKey={r => r.uid}
+            isLoading={subAgentsQ.isLoading}
+            error={subAgentsQ.isError ? { message: (subAgentsQ.error as Error).message, retry: () => subAgentsQ.refetch() } : null}
+          />
         </Tabs.Content>
       </Tabs.Root>
 
-      {editUid && (
-        <Box position="fixed" inset={0} bg="rgba(0,0,0,0.5)" backdropFilter="blur(4px)" zIndex={300} onClick={() => setEditUid(null)}>
-          <Box
-            position="fixed" top="50%" left="50%" transform="translate(-50%,-50%)"
-            bg="bg.200" border="1px solid" borderColor="border.200" borderRadius="8px" p="32px" w="440px"
-            boxShadow="0 16px 40px rgba(0,0,0,0.1)"
-            onClick={e => e.stopPropagation()}
-          >
-            <Text fontFamily="ISB" fontSize="20px" mb="24px" color="text.100" letterSpacing="-0.5px">编辑备注</Text>
-            <Text fontSize="13px" color="gray.100" mb="8px">UID: {editUid}</Text>
-            <Box
-              as="input" w="100%" h="40px" bg="bg.200" border="1px solid" borderColor="border.100"
-              borderRadius="4px" px={3} fontSize="14px" color="text.100" outline="none"
-              value={editVal}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditVal(e.target.value)}
-              transition="all 0.2s"
-              _focus={{ borderColor: 'theme', boxShadow: '0 0 0 1px rgba(10,186,181,0.5)' }}
-            />
-            <Flex justify="flex-end" gap="12px" mt="32px">
-              <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
-                borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setEditUid(null)}
-                transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
-              <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF" borderRadius="4px" fontSize="13px"
-                fontFamily="ISB" cursor="pointer" onClick={() => {
-                  setRemarks(prev => ({ ...prev, [editUid]: editVal }))
-                  setEditUid(null)
-                }} transition="all 0.2s" _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>保存</Box>
-            </Flex>
-          </Box>
-        </Box>
-      )}
+      <ModalShell open={!!editUid} onClose={() => setEditUid(null)} width="440px">
+        <Text fontFamily="ISB" fontSize="20px" mb="24px" color="text.100" letterSpacing="-0.5px">编辑备注</Text>
+        <Text fontSize="13px" color="gray.100" mb="8px">UID: {editUid}</Text>
+        <Box as="input" w="100%" h="40px" bg="bg.200" border="1px solid" borderColor="border.100"
+          borderRadius="4px" px={3} fontSize="14px" color="text.100" outline="none"
+          value={editVal}
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditVal(e.target.value)}
+          transition="all 0.2s"
+          _focus={{ borderColor: 'theme', boxShadow: '0 0 0 1px rgba(10,186,181,0.5)' }}
+        />
+        <Flex justify="flex-end" gap="12px" mt="32px">
+          <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
+            borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setEditUid(null)}
+            transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
+          <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF" borderRadius="4px" fontSize="13px"
+            fontFamily="ISB" cursor="pointer" onClick={() => {
+              if (!editUid) return
+              setRemarks(prev => ({ ...prev, [editUid]: editVal }))
+              setEditUid(null)
+            }} transition="all 0.2s" _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>保存</Box>
+        </Flex>
+      </ModalShell>
 
-      {editRateAgent && (
-        <Box position="fixed" inset={0} bg="rgba(0,0,0,0.5)" backdropFilter="blur(4px)" zIndex={300} onClick={() => setEditRateAgent(null)}>
-          <Box position="fixed" top="50%" left="50%" transform="translate(-50%,-50%)"
-            bg="bg.200" border="1px solid" borderColor="border.200" borderRadius="8px" p="32px" w="480px"
-            boxShadow="0 16px 40px rgba(0,0,0,0.1)" onClick={e => e.stopPropagation()}>
-            <Text fontFamily="ISB" fontSize="20px" mb="8px" color="text.100" letterSpacing="-0.5px">修改返佣比例</Text>
-            <Text fontSize="13px" color="gray.100" mb="24px">子代理: <Text as="span" color="text.100">{editRateAgent.nickname}</Text> ({editRateAgent.uid})</Text>
-            <Flex direction="column" gap="20px">
-              {rateFormInput('Flat Fee 返佣比例（%）', editFF, setEditFF, '0.01', rateErrors.ff, `上限: ${currentFlatFeeRate}%`)}
-              {rateFormInput('Profit Share 返佣比例（%）', editPS, setEditPS, '0.0001', rateErrors.ps, `上限: ${currentProfitShareRate}%`)}
-              {rateFormInput('事件合约返佣比例（%）', editEvent, setEditEvent, '0.01', rateErrors.event, `上限: ${currentEventRate}%`)}
-            </Flex>
-            <Flex justify="flex-end" gap="12px" mt="32px">
-              <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
-                borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setEditRateAgent(null)}
-                transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
-              <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF" borderRadius="4px" fontSize="13px"
-                fontFamily="ISB" cursor="pointer" onClick={handleSaveRate}
-                transition="all 0.2s" _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>保存</Box>
-            </Flex>
-          </Box>
-        </Box>
-      )}
+      <ModalShell open={!!editRateAgent} onClose={() => setEditRateAgent(null)} width="480px">
+        <Text fontFamily="ISB" fontSize="20px" mb="8px" color="text.100" letterSpacing="-0.5px">修改返佣比例</Text>
+        {editRateAgent && (
+          <Text fontSize="13px" color="gray.100" mb="24px">
+            子代理: <Text as="span" color="text.100">{editRateAgent.nickname}</Text> ({editRateAgent.uid})
+          </Text>
+        )}
+        <Flex direction="column" gap="20px">
+          <RateFormInput label="Flat Fee 返佣比例（%）" value={editFF} onChange={setEditFF} step="0.01" error={rateErrors.ff} extra={`上限: ${currentFlatFeeRate}%`} />
+          <RateFormInput label="Profit Share 返佣比例（%）" value={editPS} onChange={setEditPS} step="0.0001" error={rateErrors.ps} extra={`上限: ${currentProfitShareRate}%`} />
+          <RateFormInput label="事件合约返佣比例（%）" value={editEvent} onChange={setEditEvent} step="0.01" error={rateErrors.event} extra={`上限: ${currentEventRate}%`} />
+        </Flex>
+        <Flex justify="flex-end" gap="12px" mt="32px">
+          <Box as="button" px="24px" py="10px" bg="transparent" color="text.100" border="1px solid" borderColor="border.100"
+            borderRadius="4px" fontSize="13px" cursor="pointer" onClick={() => setEditRateAgent(null)}
+            transition="all 0.2s" _hover={{ bg: 'bg.100', borderColor: 'border.200' }}>取消</Box>
+          <Box as="button" px="24px" py="10px" bg="theme" color="#FFFFFF" borderRadius="4px" fontSize="13px"
+            fontFamily="ISB" cursor="pointer" onClick={handleSaveRate}
+            transition="all 0.2s" _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}>保存</Box>
+        </Flex>
+      </ModalShell>
     </Box>
   )
 }

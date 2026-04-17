@@ -27,6 +27,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // 与 public/404.html 配对的 SPA fallback 还原脚本，仅 BrowserRouter 模式生效。
+      (function () {
+        var l = window.location;
+        if (l.search.indexOf('?p=') !== 0 && l.search.indexOf('&p=') < 0) return;
+        var q = l.search.slice(1).split('&').reduce(function (acc, kv) {
+          var i = kv.indexOf('=');
+          if (i > 0) acc[kv.slice(0, i)] = decodeURIComponent(kv.slice(i + 1));
+          return acc;
+        }, {});
+        if (!q.p) return;
+        var path = q.p.replace(/~and~/g, '&');
+        var search = q.q ? '?' + q.q.replace(/~and~/g, '&') : '';
+        window.history.replaceState(null, '', l.pathname.replace(/\/$/, '') + path + search + l.hash);
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

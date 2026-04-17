@@ -4,8 +4,34 @@ import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, Input, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
-import { transferRecords } from '@/mock/data'
+import { useTransferRecords } from '@/api/queries/transfers'
 import type { TransferRecord } from '@/mock/types'
+import { fmtAmount } from '@/utils/fmtAmount'
+
+interface TransferAgg {
+  depositCount: number
+  depositAmount: number
+  withdrawalCount: number
+  withdrawalAmount: number
+}
+
+/**
+ * 单次 reduce 聚合（见审计 P5）。
+ */
+function aggregate(list: TransferRecord[]): TransferAgg {
+  let depositCount = 0, depositAmount = 0, withdrawalCount = 0, withdrawalAmount = 0
+  for (const r of list) {
+    if (r.status !== 'success') continue
+    if (r.type === 'deposit') {
+      depositCount++
+      depositAmount += r.amount
+    } else if (r.type === 'withdrawal') {
+      withdrawalCount++
+      withdrawalAmount += r.amount
+    }
+  }
+  return { depositCount, depositAmount, withdrawalCount, withdrawalAmount }
+}
 
 export default function OnchainTransfers() {
   const [uid, setUid] = useState('')
@@ -14,6 +40,9 @@ export default function OnchainTransfers() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [userLevel, setUserLevel] = useState('all')
+
+  const q = useTransferRecords()
+  const transferRecords = q.data ?? []
 
   const hasFilter = uid !== '' || type !== 'all' || subType !== 'all' || userLevel !== 'all' || dateFrom !== '' || dateTo !== ''
 
@@ -24,31 +53,29 @@ export default function OnchainTransfers() {
     if (subType !== 'all') data = data.filter(r => r.subType === subType)
     if (userLevel !== 'all') data = data.filter(r => r.userLevel === userLevel)
     return data
-  }, [uid, type, subType, userLevel])
+  }, [transferRecords, uid, type, subType, userLevel])
 
   const globalStats = useMemo(() => {
-    const depRecs = transferRecords.filter(r => r.type === 'deposit' && r.status === 'success')
-    const withRecs = transferRecords.filter(r => r.type === 'withdrawal' && r.status === 'success')
+    const a = aggregate(transferRecords)
     return [
-      { label: '充值笔数', value: depRecs.length },
-      { label: '充值金额', value: depRecs.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
-      { label: '提现笔数', value: withRecs.length },
-      { label: '提现金额', value: withRecs.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+      { label: '充值笔数', value: a.depositCount },
+      { label: '充值金额', value: fmtAmount(a.depositAmount), unit: 'USDT' },
+      { label: '提现笔数', value: a.withdrawalCount },
+      { label: '提现金额', value: fmtAmount(a.withdrawalAmount), unit: 'USDT' },
     ]
-  }, [])
+  }, [transferRecords])
 
   const filteredStatsData = useMemo(() => {
-    const depRecs = filtered.filter(r => r.type === 'deposit' && r.status === 'success')
-    const withRecs = filtered.filter(r => r.type === 'withdrawal' && r.status === 'success')
+    const a = aggregate(filtered)
     return [
-      { label: '充值', value: depRecs.length },
-      { label: '充值额', value: depRecs.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
-      { label: '提现', value: withRecs.length },
-      { label: '提现额', value: withRecs.reduce((s, r) => s + r.amount, 0).toFixed(2), unit: 'USDT' },
+      { label: '充值', value: a.depositCount },
+      { label: '充值额', value: fmtAmount(a.depositAmount), unit: 'USDT' },
+      { label: '提现', value: a.withdrawalCount },
+      { label: '提现额', value: fmtAmount(a.withdrawalAmount), unit: 'USDT' },
     ]
   }, [filtered])
 
-  const columns: Column<TransferRecord>[] = [
+  const columns: Column<TransferRecord>[] = useMemo(() => [
     {
       key: 'user', label: '用户 (UID)',
       render: r => (
@@ -60,7 +87,7 @@ export default function OnchainTransfers() {
     },
     {
       key: 'sub', label: '归属子代理',
-      render: r => <Text color="text.100">{r.subAgentUid ?? '—'}</Text>
+      render: r => <Text color="text.100">{r.subAgentUid ?? '—'}</Text>,
     },
     {
       key: 'type', label: '充提类型',
@@ -69,7 +96,9 @@ export default function OnchainTransfers() {
           <Text color={r.type === 'deposit' ? 'theme' : 'text.100'} fontFamily="ISB" fontSize="15px">
             {r.type === 'deposit' ? '充值' : '提现'}
           </Text>
-          {r.subType === 'internal_transfer' && <Text fontSize="10px" bg="bg.200" border="1px solid" borderColor="border.100" color="gray.100" px="4px" py="2px" borderRadius="2px">内部转账</Text>}
+          {r.subType === 'internal_transfer' && (
+            <Text fontSize="10px" bg="bg.200" border="1px solid" borderColor="border.100" color="gray.100" px="4px" py="2px" borderRadius="2px">内部转账</Text>
+          )}
         </HStack>
       ),
     },
@@ -78,23 +107,19 @@ export default function OnchainTransfers() {
       render: r => <Text fontSize="13px" color="text.100">{r.channel}</Text>,
     },
     {
-      key: 'amt', label: '数量 (USDT)',
-      align: 'right',
-      render: r => <Text fontFamily="ISB" fontSize="16px" color="text.100">{r.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>,
-      sortable: true, sortKey: r => r.amount,
-      minW: '140px',
+      key: 'amt', label: '数量 (USDT)', align: 'right',
+      render: r => <Text fontFamily="ISB" fontSize="16px" color="text.100">{fmtAmount(r.amount, { style: 'thousand' })}</Text>,
+      sortable: true, sortKey: r => r.amount, minW: '140px',
     },
     {
-      key: 'status', label: '状态',
-      align: 'right',
+      key: 'status', label: '状态', align: 'right',
       render: r => <StatusBadge type="transfer" value={r.status} />,
     },
     {
-      key: 'time', label: '时间',
-      align: 'right',
+      key: 'time', label: '时间', align: 'right',
       render: r => <Text fontSize="13px" color="gray.200">{r.time}</Text>,
     },
-  ]
+  ], [])
 
   return (
     <Box>
@@ -129,7 +154,13 @@ export default function OnchainTransfers() {
       {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStatsData} />}
 
       <Box mt="24px">
-        <DataTable data={filtered} columns={columns} />
+        <DataTable
+          data={filtered}
+          columns={columns}
+          getRowKey={(r, i) => `${r.uid}-${r.time}-${i}`}
+          isLoading={q.isLoading}
+          error={q.isError ? { message: (q.error as Error).message, retry: () => q.refetch() } : null}
+        />
       </Box>
     </Box>
   )

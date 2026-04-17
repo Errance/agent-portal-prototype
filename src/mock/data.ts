@@ -4,7 +4,31 @@ import type {
   PerpPosition, PerpOrder, EventOrder, InviteCode, TransferRecord,
   SettlementConfig, InviteStats,
 } from './types'
+import { createRng } from '@/utils/prng'
 
+/**
+ * mock/data.ts
+ * ------------------------------------------------------------
+ * 所有 mock 都走一个 seeded PRNG（见审计 M1）。目的：
+ * 1. HMR / reload 后数据保持完全一致，便于与线上截图对比。
+ * 2. invitees / commissionRecords / transferRecords 使用同一 userPool，
+ *    跳转 / 筛选 / 贡献明细之间数据自洽。
+ * 3. 后端接入时，mock 层可被整体替换为 real adapter，不影响 UI 契约。
+ */
+
+const { rand, pick, pickInt, next } = createRng(20260416)
+
+// ---- 基础生成器 ----------------------------------------------------
+const uid = (i: number) => `UID${String(100000 + i)}`
+const date = (daysAgo: number) => {
+  const d = new Date()
+  d.setDate(d.getDate() - daysAgo)
+  return d.toISOString().slice(0, 10) + ' 00:00:00'
+}
+const dateOnly = (daysAgo: number) => date(daysAgo).slice(0, 10)
+const randPs = (min: number, max: number) => rand(min, max, 4)
+
+// ---- 代理账户 -------------------------------------------------------
 export const agentConfig = {
   status: 'normal' as AgentStatus,
   selfRebateEnabled: true,
@@ -17,17 +41,7 @@ export const agentConfig = {
   agentLevel: 3 as AgentLevel,
 }
 
-const uid = (i: number) => `UID${String(100000 + i)}`
-const date = (daysAgo: number) => {
-  const d = new Date()
-  d.setDate(d.getDate() - daysAgo)
-  return d.toISOString().slice(0, 10) + ' 00:00:00'
-}
-const dateOnly = (daysAgo: number) => date(daysAgo).slice(0, 10)
-const rand = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 100) / 100
-const randPs = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10000) / 10000
-const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
-
+// ---- 仪表盘 KPI（前端不再计算的硬编码示意值） ---------------------------
 export const dashboardKPI: DashboardKPI[] = [
   { label: '今日注册数', value: 23, unit: '人', changePercent: 15.0 },
   { label: '今日净充值', value: 45280.50, unit: 'USDT', changePercent: -8.3 },
@@ -40,12 +54,28 @@ export const dashboardKPI: DashboardKPI[] = [
 
 export const inviteCodeSummary: InviteCodeSummary[] = Array.from({ length: 8 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
-  registrations: Math.floor(Math.random() * 100) + 5,
+  registrations: pickInt(5, 105),
   flatFeeRate: rand(0.10, 0.60),
   profitShareRate: randPs(0.0010, 0.0060),
   eventRate: rand(0.20, 1.00),
 }))
 
+// ---- 用户池（uid + 身份）：所有下游表从这里 pick -----------------------
+interface PooledUser {
+  uid: string
+  identityType: 'regular' | 'sub_agent'
+}
+
+const USER_POOL_SIZE = 50
+export const userPool: PooledUser[] = Array.from({ length: USER_POOL_SIZE }, (_, i) => ({
+  uid: uid(i),
+  identityType: next() > 0.5 ? 'sub_agent' : 'regular',
+}))
+
+const pickUser = (): PooledUser => pick(userPool)
+const pickUserUid = (): string => pickUser().uid
+
+// ---- invitees（直接邀请人） ---------------------------------------------
 export const invitees: Invitee[] = [
   {
     uid: 'SELF',
@@ -60,15 +90,15 @@ export const invitees: Invitee[] = [
     profitShareCommUsdt: 0, profitShareCommUsdc: 0,
     eventCommission: 0,
   },
-  ...Array.from({ length: 50 }, (_, i) => {
+  ...userPool.map((u, i) => {
     const dep = pick(['deposited', 'not_deposited'] as const)
-    const traded = dep === 'deposited' && Math.random() > 0.3
+    const traded = dep === 'deposited' && next() > 0.3
     return {
-      uid: uid(i),
-      identityType: pick(['regular', 'sub_agent'] as const),
+      uid: u.uid,
+      identityType: u.identityType,
       depositStatus: dep,
       tradeStatus: (traded ? 'traded' : 'not_traded') as const,
-      registeredAt: date(Math.floor(Math.random() * 90)),
+      registeredAt: date(pickInt(0, 89)),
       remark: i % 5 === 0 ? `备注${i}` : '',
       flatFeeCommUsdt: traded ? rand(5, 400) : 0,
       flatFeeCommUsdc: traded ? rand(2, 150) : 0,
@@ -79,13 +109,14 @@ export const invitees: Invitee[] = [
   }),
 ]
 
+// ---- 子代理 --------------------------------------------------------
 export const subAgents: SubAgent[] = Array.from({ length: 15 }, (_, i) => ({
   uid: uid(200 + i),
   nickname: `Agent_${String.fromCharCode(65 + i)}`,
   flatFeeRate: rand(0.10, 0.60),
   profitShareRate: randPs(0.0010, 0.0060),
   eventRate: rand(0.20, 0.90),
-  registeredAt: date(Math.floor(Math.random() * 180)),
+  registeredAt: date(pickInt(0, 179)),
   directCommUsdt: rand(50, 8000),
   directCommUsdc: rand(20, 3000),
   platformRewardUsdt: rand(30, 5000),
@@ -110,13 +141,13 @@ export const dailyRevenue: DailyRevenue[] = Array.from({ length: 30 }, (_, i) =>
 }))
 
 export const commissionRecords: CommissionRecord[] = Array.from({ length: 100 }, (_, i) => {
-  const isDirect = Math.random() > 0.3
-  const isPerp = Math.random() > 0.4
+  const isDirect = next() > 0.3
+  const isPerp = next() > 0.4
   return {
     id: `CR${String(10000 + i)}`,
-    time: date(Math.floor(Math.random() * 30)),
+    time: date(pickInt(0, 29)),
     sourceType: isDirect ? 'direct' : 'platform_reward',
-    sourceUid: isDirect ? uid(Math.floor(Math.random() * 50)) : null,
+    sourceUid: isDirect ? pickUserUid() : null,
     productLine: isPerp ? 'perpetual' : 'event',
     settlementType: isPerp ? pick(['flat_fee', 'profit_share'] as const) : null,
     tradeVolume: isDirect ? rand(1000, 50000) : null,
@@ -134,7 +165,7 @@ export const settlementConfig: SettlementConfig = {
 
 const pairs = ['BTC/USDT', 'ETH/USDT', 'SOL/USDT']
 export const perpPositions: PerpPosition[] = Array.from({ length: 30 }, (_, i) => ({
-  uid: uid(Math.floor(Math.random() * 50)),
+  uid: pickUserUid(),
   remark: i % 4 === 0 ? `VIP${i}` : '',
   pair: pick(pairs),
   side: pick(['long', 'short'] as const),
@@ -146,7 +177,7 @@ export const perpPositions: PerpPosition[] = Array.from({ length: 30 }, (_, i) =
 }))
 
 export const perpHistory: PerpOrder[] = Array.from({ length: 30 }, (_, i) => ({
-  uid: uid(Math.floor(Math.random() * 50)),
+  uid: pickUserUid(),
   remark: i % 3 === 0 ? `Note${i}` : '',
   pair: pick(pairs),
   subType: pick(['open', 'close', 'liquidation'] as const),
@@ -154,19 +185,19 @@ export const perpHistory: PerpOrder[] = Array.from({ length: 30 }, (_, i) => ({
   price: rand(20000, 70000),
   quantity: rand(0.01, 5),
   fee: rand(0.5, 50),
-  time: date(Math.floor(Math.random() * 30)),
+  time: date(pickInt(0, 29)),
 }))
 
 const events = ['BTC 价格预测', 'ETH 价格预测', '黄金走势', '美元指数', 'SOL 突破']
-export const eventHistory: EventOrder[] = Array.from({ length: 30 }, (_, i) => ({
-  uid: uid(Math.floor(Math.random() * 50)),
+export const eventHistory: EventOrder[] = Array.from({ length: 30 }, () => ({
+  uid: pickUserUid(),
   remark: '',
   eventName: pick(events),
   direction: pick(['看涨', '看跌']),
   amount: rand(100, 10000),
   result: pick(['win', 'lose', 'pending'] as const),
   pnl: rand(-5000, 5000),
-  time: date(Math.floor(Math.random() * 30)),
+  time: date(pickInt(0, 29)),
 }))
 
 export const inviteCodes: InviteCode[] = Array.from({ length: 20 }, (_, i) => ({
@@ -178,14 +209,14 @@ export const inviteCodes: InviteCode[] = Array.from({ length: 20 }, (_, i) => ({
   subProfitShareRate: randPs(0.0010, agentConfig.currentProfitShareRate - 0.0001),
   myEventRate: agentConfig.currentEventRate,
   subEventRate: rand(0.20, agentConfig.currentEventRate - 0.01),
-  registrations: Math.floor(Math.random() * 80) + 2,
-  firstDepositCount: Math.floor(Math.random() * 40) + 1,
-  firstTradeCount: Math.floor(Math.random() * 30) + 1,
-  tradeDau: Math.floor(Math.random() * 20),
+  registrations: pickInt(2, 81),
+  firstDepositCount: pickInt(1, 40),
+  firstTradeCount: pickInt(1, 30),
+  tradeDau: pickInt(0, 19),
   tradeVolume: rand(10000, 500000),
   commission: rand(100, 8000),
   linkUrl: `https://app.turboflow.io/r/TF${String(1000 + i)}`,
-  createdAt: date(Math.floor(Math.random() * 60)),
+  createdAt: date(pickInt(0, 59)),
   remark: i % 3 === 0 ? `推广${i}` : '',
 }))
 
@@ -194,21 +225,22 @@ export const inviteStats: InviteStats = {
   depositAmount: rand(50000, 200000),
   tradeVolume: rand(500000, 3000000),
   commission: rand(10000, 50000),
-  tradeDau: Math.floor(Math.random() * 80) + 10,
+  tradeDau: pickInt(10, 89),
 }
 
 const channels = ['ERC-20', 'TRC-20', 'SOL', 'BSC', 'Arbitrum']
-export const transferRecords: TransferRecord[] = Array.from({ length: 40 }, (_, i) => {
-  const isSubAgent = Math.random() > 0.6
+export const transferRecords: TransferRecord[] = Array.from({ length: 40 }, () => {
+  const u = pickUser()
+  const isSubAgent = u.identityType === 'sub_agent'
   return {
-    uid: uid(Math.floor(Math.random() * 50)),
-    userLevel: isSubAgent ? 'sub_agent' : 'regular',
-    subAgentUid: isSubAgent ? uid(200 + Math.floor(Math.random() * 15)) : null,
+    uid: u.uid,
+    userLevel: u.identityType,
+    subAgentUid: isSubAgent ? uid(200 + pickInt(0, 14)) : null,
     channel: pick(channels),
     type: pick(['deposit', 'withdrawal'] as const),
     subType: pick(['normal', 'internal_transfer'] as const),
     amount: rand(10, 50000),
     status: pick(['processing', 'success', 'failed'] as const),
-    time: date(Math.floor(Math.random() * 30)),
+    time: date(pickInt(0, 29)),
   }
 })
