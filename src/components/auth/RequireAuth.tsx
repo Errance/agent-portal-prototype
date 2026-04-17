@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Box, Flex, Text } from '@chakra-ui/react'
 import { useAuth } from '@/auth'
 
@@ -36,16 +36,33 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
    */
   const autoLoginFiredRef = useRef(false)
 
+  /**
+   * "正在打开登录窗口..."过渡状态。
+   *
+   * Privy SDK 首次弹 modal 会懒加载一个 chunk（`LandingScreen-*.js`），
+   * 从 ready → modal 可见之间有 0.5–1.5s 网络时间。这段时间里我们
+   * 把空白 blur 页换成带 spinner 的 "正在打开登录窗口..."，让用户感知
+   * 到系统在工作，避免"点了登出看了半天 blur 页"的困惑。
+   *
+   * 设计上是 soft 的：2 秒超时后自动退回普通 blur 页（含点击重试提示），
+   * 不会永久卡在"正在打开..."。
+   */
+  const [openingModal, setOpeningModal] = useState(false)
+
   useEffect(() => {
     if (auth.isLoading) return
     if (auth.isAuthenticated) {
       // 认证过就永远不再 auto-trigger（防止 logout 被秒 re-login）
       autoLoginFiredRef.current = true
+      setOpeningModal(false)
       return
     }
     if (autoLoginFiredRef.current) return
     autoLoginFiredRef.current = true
+    setOpeningModal(true)
     void auth.login()
+    const timer = setTimeout(() => setOpeningModal(false), 2000)
+    return () => clearTimeout(timer)
   }, [auth.isLoading, auth.isAuthenticated, auth])
 
   if (auth.isLoading) {
@@ -70,7 +87,11 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
     // 幕布点击 = 再次打开 Privy modal。对"用户关闭了 modal"或"换取失败后"的
     // 重试场景都适用；真正的错误文案由 Toast 发出。
     const handleBackdropClick = () => {
+      // 在"正在打开 modal"窗口期内重复点击可能会让 SDK 抖动，忽略
+      if (openingModal) return
+      setOpeningModal(true)
       void auth.login()
+      setTimeout(() => setOpeningModal(false), 2000)
     }
     return (
       <Flex
@@ -88,24 +109,46 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
         aria-label="登录"
         css={{ backdropFilter: 'blur(8px)' }}
       >
-        <Box textAlign="center" maxW="400px" px="24px">
+        <Flex direction="column" align="center" maxW="400px" px="24px" textAlign="center">
           <Text
             fontFamily="ISB"
             fontSize="28px"
             color="theme"
             letterSpacing="-0.5px"
-            mb="12px"
+            mb="16px"
             userSelect="none"
           >
             TurboFlow
           </Text>
-          <Text fontSize="13px" color="gray.100" lineHeight="1.6">
-            请在弹出窗口中完成登录以访问代理后台
-          </Text>
-          <Text fontSize="12px" color="gray.200" mt="8px" lineHeight="1.6">
-            若弹窗未出现，点击页面任意位置重试
-          </Text>
-        </Box>
+          {openingModal ? (
+            <>
+              <Box
+                w="24px"
+                h="24px"
+                border="2px solid"
+                borderColor="border.100"
+                borderTopColor="theme"
+                borderRadius="full"
+                animation="spin 0.9s linear infinite"
+                css={{ '@keyframes spin': { to: { transform: 'rotate(360deg)' } } }}
+                mb="12px"
+                aria-hidden
+              />
+              <Text fontSize="13px" color="gray.100" lineHeight="1.6">
+                正在打开登录窗口…
+              </Text>
+            </>
+          ) : (
+            <>
+              <Text fontSize="13px" color="gray.100" lineHeight="1.6">
+                请在弹出窗口中完成登录以访问代理后台
+              </Text>
+              <Text fontSize="12px" color="gray.200" mt="8px" lineHeight="1.6">
+                若弹窗未出现，点击页面任意位置重试
+              </Text>
+            </>
+          )}
+        </Flex>
       </Flex>
     )
   }
