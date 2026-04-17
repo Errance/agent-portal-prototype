@@ -10,6 +10,7 @@ import { useAgent } from '@/context/AgentContext'
 import { useInviteCodes, useInviteStats } from '@/api/queries/invite'
 import type { InviteCode } from '@/mock/types'
 import { fmtAmount } from '@/utils/fmtAmount'
+import { toNumber } from '@/utils/parse'
 import { validateRate, type RateErrors } from '@/utils/validateRate'
 import { safeCopyPromotionLink } from '@/utils/safeUrl'
 import dayjs from 'dayjs'
@@ -139,13 +140,14 @@ export default function InvitePromotion() {
   }, [statsQ.data])
 
   const filteredStatsData = useMemo(() => {
+    // 审计 C2：toNumber 防御后端字符串返回
     let regs = 0, deps = 0, vol = 0, comm = 0, dau = 0
     for (const c of filtered) {
-      regs += c.registrations
-      deps += c.firstDepositCount
-      vol += c.tradeVolume
-      comm += c.commission
-      dau += c.tradeDau
+      regs += toNumber(c.registrations)
+      deps += toNumber(c.firstDepositCount)
+      vol += toNumber(c.tradeVolume)
+      comm += toNumber(c.commission)
+      dau += toNumber(c.tradeDau)
     }
     return [
       { label: '注册', value: regs, unit: '人' },

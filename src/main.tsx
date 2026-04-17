@@ -27,6 +27,22 @@ const queryClient = new QueryClient({
   },
 })
 
+/**
+ * 401 未登录统一处理（审计 C5 修复）：
+ * - `apiFetch` 收到 401 会 dispatch 'api:unauthorized'
+ * - 这里全局注册一次监听，清空 react-query 缓存并跳到 `/`
+ * - AppLayout 未登录（或未代理）时会自动跳到 `/not-agent`
+ * - Privy 接入后，这里改为触发 Privy 登录 modal
+ */
+if (typeof window !== 'undefined') {
+  window.addEventListener('api:unauthorized', () => {
+    queryClient.clear()
+    if (window.location.hash && window.location.hash !== '#/') {
+      window.location.hash = '#/'
+    }
+  })
+}
+
 const Router = ROUTER_KIND === 'browser' ? BrowserRouter : HashRouter
 const routerProps = ROUTER_KIND === 'browser' ? { basename: BASENAME || undefined } : {}
 

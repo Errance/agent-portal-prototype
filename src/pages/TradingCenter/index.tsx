@@ -9,6 +9,7 @@ import { useAgent } from '@/context/AgentContext'
 import { usePerpPositions, usePerpHistory, useEventHistory } from '@/api/queries/trading'
 import type { PerpPosition, PerpOrder, EventOrder } from '@/mock/types'
 import { fmtAmount } from '@/utils/fmtAmount'
+import { toNumber } from '@/utils/parse'
 
 const allPerpPosCols: Column<PerpPosition>[] = [
   {
@@ -43,7 +44,7 @@ const allPerpPosCols: Column<PerpPosition>[] = [
   {
     key: 'pnl', label: '未实现盈亏', align: 'right',
     render: r => <Text color={r.unrealizedPnl >= 0 ? 'theme' : 'red.100'} fontFamily="ISB" fontSize="16px">{fmtAmount(r.unrealizedPnl)}</Text>,
-    sortable: true, sortKey: r => r.unrealizedPnl,
+    sortable: true, sortKey: r => toNumber(r.unrealizedPnl),
   },
 ]
 
@@ -81,7 +82,7 @@ const allPerpHistCols: Column<PerpOrder>[] = [
   {
     key: 'fee', label: '手续费', align: 'right',
     render: r => <Text fontFamily="ISB" fontSize="15px">{fmtAmount(r.fee)}</Text>,
-    sortable: true, sortKey: r => r.fee,
+    sortable: true, sortKey: r => toNumber(r.fee),
   },
   {
     key: 'time', label: '成交时间',
@@ -110,7 +111,7 @@ const allEventCols: Column<EventOrder>[] = [
   {
     key: 'amt', label: '投注金额', align: 'right',
     render: r => <Text fontFamily="ISB" fontSize="15px">{fmtAmount(r.amount)}</Text>,
-    sortable: true, sortKey: r => r.amount,
+    sortable: true, sortKey: r => toNumber(r.amount),
   },
   {
     key: 'result', label: '结算结果', align: 'right',
@@ -133,13 +134,13 @@ const allEventCols: Column<EventOrder>[] = [
 ]
 
 /**
- * 单次 reduce 聚合（见审计 P5），替代多次 reduce 链。
+ * 单次 reduce 聚合（审计 P5 / C2：数值经 toNumber 防御后端字符串）。
  */
 function statsForPositions(list: PerpPosition[]) {
   let marketValue = 0, upnl = 0
   for (const r of list) {
-    marketValue += r.quantity * r.markPrice
-    upnl += r.unrealizedPnl
+    marketValue += toNumber(r.quantity) * toNumber(r.markPrice)
+    upnl += toNumber(r.unrealizedPnl)
   }
   return [
     { label: '持仓数', value: list.length },
@@ -151,8 +152,8 @@ function statsForPositions(list: PerpPosition[]) {
 function statsForOrders(list: PerpOrder[]) {
   let volume = 0, fee = 0
   for (const r of list) {
-    volume += r.price * r.quantity
-    fee += r.fee
+    volume += toNumber(r.price) * toNumber(r.quantity)
+    fee += toNumber(r.fee)
   }
   return [
     { label: '订单数', value: list.length },
@@ -164,8 +165,8 @@ function statsForOrders(list: PerpOrder[]) {
 function statsForEvents(list: EventOrder[]) {
   let amount = 0, pnl = 0
   for (const r of list) {
-    amount += r.amount
-    pnl += r.pnl
+    amount += toNumber(r.amount)
+    pnl += toNumber(r.pnl)
   }
   return [
     { label: '订单数', value: list.length },
@@ -247,8 +248,8 @@ export default function TradingCenter() {
           <Text fontSize="13px" color="gray.100" textTransform="uppercase" letterSpacing="0.5px" mb="8px">总交易额（USDT）</Text>
           <Text fontSize="32px" fontFamily="ISB" color="text.100" lineHeight="1">
             {fmtAmount(
-              perpHistory.reduce((s, r) => s + r.price * r.quantity, 0)
-              + eventHistory.reduce((s, r) => s + r.amount, 0),
+              perpHistory.reduce((s, r) => s + toNumber(r.price) * toNumber(r.quantity), 0)
+              + eventHistory.reduce((s, r) => s + toNumber(r.amount), 0),
               { style: 'thousand' },
             )}
           </Text>

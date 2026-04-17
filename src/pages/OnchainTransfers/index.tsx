@@ -7,6 +7,7 @@ import { FilterBar, Select, Input, FilterItem, DateRangeInput } from '@/componen
 import { useTransferRecords } from '@/api/queries/transfers'
 import type { TransferRecord } from '@/mock/types'
 import { fmtAmount } from '@/utils/fmtAmount'
+import { toNumber } from '@/utils/parse'
 
 interface TransferAgg {
   depositCount: number
@@ -16,18 +17,19 @@ interface TransferAgg {
 }
 
 /**
- * 单次 reduce 聚合（见审计 P5）。
+ * 单次 reduce 聚合（审计 P5 / C2：所有金额经 toNumber 防御后端字符串）。
  */
 function aggregate(list: TransferRecord[]): TransferAgg {
   let depositCount = 0, depositAmount = 0, withdrawalCount = 0, withdrawalAmount = 0
   for (const r of list) {
     if (r.status !== 'success') continue
+    const amt = toNumber(r.amount)
     if (r.type === 'deposit') {
       depositCount++
-      depositAmount += r.amount
+      depositAmount += amt
     } else if (r.type === 'withdrawal') {
       withdrawalCount++
-      withdrawalAmount += r.amount
+      withdrawalAmount += amt
     }
   }
   return { depositCount, depositAmount, withdrawalCount, withdrawalAmount }
@@ -109,7 +111,7 @@ export default function OnchainTransfers() {
     {
       key: 'amt', label: '数量 (USDT)', align: 'right',
       render: r => <Text fontFamily="ISB" fontSize="16px" color="text.100">{fmtAmount(r.amount, { style: 'thousand' })}</Text>,
-      sortable: true, sortKey: r => r.amount, minW: '140px',
+      sortable: true, sortKey: r => toNumber(r.amount), minW: '140px',
     },
     {
       key: 'status', label: '状态', align: 'right',

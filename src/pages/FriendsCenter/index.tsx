@@ -11,7 +11,8 @@ import RateFormInput from '@/components/shared/RateFormInput'
 import { useAgent } from '@/context/AgentContext'
 import { useInvitees, useSubAgents } from '@/api/queries/friends'
 import type { Invitee, SubAgent } from '@/mock/types'
-import { sumAmounts, fmtAmount } from '@/utils/fmtAmount'
+import { fmtAmount } from '@/utils/fmtAmount'
+import { toNumber } from '@/utils/parse'
 import { validateRate, type RateErrors } from '@/utils/validateRate'
 import Decimal from 'decimal.js-light'
 
@@ -149,7 +150,7 @@ export default function FriendsCenter() {
           <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.flatFeeCommUsdc)} USDC</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.flatFeeCommUsdt, minW: '140px',
+      sortable: true, sortKey: r => toNumber(r.flatFeeCommUsdt), minW: '140px',
     },
     {
       key: 'psComm', label: 'PS 返佣', align: 'right',
@@ -159,7 +160,7 @@ export default function FriendsCenter() {
           <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.profitShareCommUsdc)} USDC</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.profitShareCommUsdt, minW: '140px',
+      sortable: true, sortKey: r => toNumber(r.profitShareCommUsdt), minW: '140px',
     },
     {
       key: 'evComm', label: '事件返佣', align: 'right',
@@ -168,18 +169,7 @@ export default function FriendsCenter() {
           <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.eventCommission)} USDT</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.eventCommission, minW: '120px',
-    },
-    {
-      key: 'totalComm', label: '总返佣(等值)', align: 'right',
-      render: r => r.isSelf ? '—' : (
-        <Text fontFamily="ISB" color="theme" fontSize="16px">
-          {fmtAmount(sumAmounts([r.flatFeeCommUsdt, r.flatFeeCommUsdc, r.profitShareCommUsdt, r.profitShareCommUsdc, r.eventCommission]))}
-        </Text>
-      ),
-      sortable: true,
-      sortKey: r => r.flatFeeCommUsdt + r.flatFeeCommUsdc + r.profitShareCommUsdt + r.profitShareCommUsdc + r.eventCommission,
-      minW: '120px',
+      sortable: true, sortKey: r => toNumber(r.eventCommission), minW: '120px',
     },
     {
       key: 'remark', label: '备注',
@@ -254,7 +244,7 @@ export default function FriendsCenter() {
           <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.directCommUsdc, { style: 'thousand' })} USDC</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.directCommUsdt, minW: '160px',
+      sortable: true, sortKey: r => toNumber(r.directCommUsdt), minW: '160px',
     },
     {
       key: 'reward', label: '平台奖励', align: 'right',
@@ -264,7 +254,7 @@ export default function FriendsCenter() {
           <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.platformRewardUsdc, { style: 'thousand' })} USDC</Text>
         </Box>
       ),
-      sortable: true, sortKey: r => r.platformRewardUsdt, minW: '160px',
+      sortable: true, sortKey: r => toNumber(r.platformRewardUsdt), minW: '160px',
     },
     {
       key: 'action', label: '操作', align: 'right',
