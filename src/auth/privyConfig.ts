@@ -46,19 +46,15 @@ export const privyConfig: PrivyClientConfig = {
 }
 
 /**
- * sit 默认 Privy App ID（LP Dashboard 专用 App，后端开发确认）。
- *
- * agent-portal / LP Dashboard 有**独立**的 Privy App，不跟 surf-one 业务
- * sit App 共用（避免开发模式 user limit 冲突）。后端 `/login` 的 aud 校验
- * 对齐的是这组 ID。
+ * sit 默认 Privy App ID（agent-portal 对接的 App，与后端 `/login` aud 校验对齐）。
  *
  * 环境对照：
- *   LP sit  = cmb61g21n0087kz0mk7wo5b74
- *   LP uat  = cmb6av9be01kml40ne5c6ivx8
- *   LP prod = cmb6agllr01jek10mdsl79fzk
+ *   sit  = cmbir1ip600bejx0mu6b42iek
+ *   uat  = cmdsozhfd004mlb0b47ukqv7s
+ *   prod = cmcjy9lbg0028l70m9owhg0oa
  *
- * 历史参考（不使用）：
- *   surf-one 业务 sit = cm3zc6y73001tjxd1ui968tg7（开发模式 user limit 已满）
- *   turboflow 主站 sit = cmbir1ip600bejx0mu6b42iek
+ * 历史尝试（均因 aud 不匹配 / 开发模式满员失败）：
+ *   cm3zc6y73001tjxd1ui968tg7   - surf-one 业务 sit，用户额度已满
+ *   cmb61g21n0087kz0mk7wo5b74   - LP Dashboard sit，后端未部署对齐
  */
-export const DEFAULT_PRIVY_APP_ID = 'cmb61g21n0087kz0mk7wo5b74'
+export const DEFAULT_PRIVY_APP_ID = 'cmbir1ip600bejx0mu6b42iek'
