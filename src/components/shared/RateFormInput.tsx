@@ -1,4 +1,5 @@
 import { Box, Text } from '@chakra-ui/react'
+import { ChakraInput } from './styled'
 
 interface Props {
   label: string
@@ -18,8 +19,7 @@ export default function RateFormInput({ label, value, onChange, step, error, ext
       <Text fontSize="12px" color="gray.100" mb="8px" textTransform="uppercase" letterSpacing="0.5px">
         {label}{extra && <Text as="span" color="gray.200"> {extra}</Text>}
       </Text>
-      <Box
-        as="input"
+      <ChakraInput
         w="100%"
         h="40px"
         bg="bg.200"
@@ -33,7 +33,7 @@ export default function RateFormInput({ label, value, onChange, step, error, ext
         type="number"
         step={step}
         value={value}
-        onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         transition="all 0.2s"
         _focus={{
           borderColor: error ? 'red.100' : 'theme',

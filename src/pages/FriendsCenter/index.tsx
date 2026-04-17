@@ -7,8 +7,10 @@ import { FilterBar, Select, FilterItem } from '@/components/shared/FilterBar'
 import PillButton from '@/components/shared/PillButton'
 import ModalShell from '@/components/shared/ModalShell'
 import RateFormInput from '@/components/shared/RateFormInput'
+import { ChakraInput } from '@/components/shared/styled'
 import { useAgent } from '@/context/AgentContext'
 import { useInvitees, useSubAgents } from '@/api/queries/friends'
+import { toError } from '@/api/client'
 import type { Invitee, SubAgent } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
@@ -319,7 +321,7 @@ export default function FriendsCenter() {
             columns={inviteeColumns}
             getRowKey={r => r.uid}
             isLoading={inviteesQ.isLoading}
-            error={inviteesQ.isError ? { message: (inviteesQ.error as Error).message, retry: () => inviteesQ.refetch() } : null}
+            error={inviteesQ.isError ? { message: toError(inviteesQ.error).message, retry: () => inviteesQ.refetch() } : null}
           />
         </Tabs.Content>
 
@@ -330,7 +332,7 @@ export default function FriendsCenter() {
             columns={subAgentColumns}
             getRowKey={r => r.uid}
             isLoading={subAgentsQ.isLoading}
-            error={subAgentsQ.isError ? { message: (subAgentsQ.error as Error).message, retry: () => subAgentsQ.refetch() } : null}
+            error={subAgentsQ.isError ? { message: toError(subAgentsQ.error).message, retry: () => subAgentsQ.refetch() } : null}
           />
         </Tabs.Content>
       </Tabs.Root>
@@ -338,10 +340,10 @@ export default function FriendsCenter() {
       <ModalShell open={!!editUid} onClose={() => setEditUid(null)} width="440px">
         <Text fontFamily="ISB" fontSize="20px" mb="24px" color="text.100" letterSpacing="-0.5px">编辑备注</Text>
         <Text fontSize="13px" color="gray.100" mb="8px">UID: {editUid}</Text>
-        <Box as="input" w="100%" h="40px" bg="bg.200" border="1px solid" borderColor="border.100"
+        <ChakraInput w="100%" h="40px" bg="bg.200" border="1px solid" borderColor="border.100"
           borderRadius="4px" px={3} fontSize="14px" color="text.100" outline="none"
           value={editVal}
-          onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditVal(e.target.value)}
+          onChange={(e) => setEditVal(e.target.value)}
           transition="all 0.2s"
           _focus={{ borderColor: 'theme', boxShadow: '0 0 0 1px rgba(10,186,181,0.5)' }}
         />

@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react'
 import { Box, Flex, Text, Grid } from '@chakra-ui/react'
+import { ChakraInput, ChakraSelect } from './styled'
 
 interface FilterItemProps {
   label: string
@@ -29,10 +30,9 @@ export function Select({
   disabled?: boolean
 }) {
   return (
-    <Box
-      as="select"
+    <ChakraSelect
       value={value}
-      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => onChange(e.target.value)}
+      onChange={(e) => onChange(e.target.value)}
       disabled={disabled}
       w="100%"
       h="36px"
@@ -54,7 +54,7 @@ export function Select({
           {o.label}
         </option>
       ))}
-    </Box>
+    </ChakraSelect>
   )
 }
 
@@ -67,11 +67,10 @@ export function Input({
   type?: string
 }) {
   return (
-    <Box
-      as="input"
+    <ChakraInput
       type={type}
       value={value}
-      onChange={(e: React.ChangeEvent<HTMLInputElement>) => onChange(e.target.value)}
+      onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}
       w="100%"
       h="36px"

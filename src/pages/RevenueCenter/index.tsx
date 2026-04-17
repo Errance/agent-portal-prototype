@@ -5,6 +5,7 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
 import { useDailyRevenue, useCommissionRecords, useSettlementConfig } from '@/api/queries/revenue'
+import { toError } from '@/api/client'
 import type { DailyRevenue, CommissionRecord } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
@@ -304,7 +305,7 @@ export default function RevenueCenter() {
             data={daily} columns={dailyColumns}
             getRowKey={r => r.date}
             isLoading={dailyQ.isLoading}
-            error={dailyQ.isError ? { message: (dailyQ.error as Error).message, retry: () => dailyQ.refetch() } : null}
+            error={dailyQ.isError ? { message: toError(dailyQ.error).message, retry: () => dailyQ.refetch() } : null}
             footer={<Text fontSize="12px" color="gray.200" mt="8px">佣金包含直推返佣和平台奖励，交易额仅统计直推用户的交易，两者不构成简单的比例关系。</Text>}
           />
         </Tabs.Content>
@@ -313,7 +314,7 @@ export default function RevenueCenter() {
             data={filteredRecords} columns={recordColumns}
             getRowKey={r => r.id}
             isLoading={recordsQ.isLoading}
-            error={recordsQ.isError ? { message: (recordsQ.error as Error).message, retry: () => recordsQ.refetch() } : null}
+            error={recordsQ.isError ? { message: toError(recordsQ.error).message, retry: () => recordsQ.refetch() } : null}
           />
         </Tabs.Content>
         <Tabs.Content value="2">

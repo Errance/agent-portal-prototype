@@ -2,10 +2,13 @@
  * 统一校验「下级返佣比例」三项表单（FF / PS / Event）。
  * 覆盖 InvitePromotion 新建/编辑推广码 与 FriendsCenter 修改子代理比例。
  *
- * 规则：
+ * 规则（审计 M5：严格小于，待产品确认是否允许"持平"）：
  * 1. 非空、可解析为有限数字
  * 2. > 0
- * 3. < 代理自身该项比例（上限）
+ * 3. < 代理自身该项比例（上限，严格小于）
+ *
+ * 若产品决定允许子级 == 上级，需要把下面 `n >= cap` 改为 `n > cap`，并同步后端
+ * 写接口校验逻辑，见 docs/BACKEND_API_SCHEMA.md §0.6。
  */
 
 export interface RateCaps {

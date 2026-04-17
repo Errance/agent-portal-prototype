@@ -3,6 +3,7 @@ import { useRoutes } from 'react-router-dom'
 import { Box, Flex, Text } from '@chakra-ui/react'
 import { AgentProvider } from '@/context/AgentContext'
 import AppLayout from '@/components/layout/AppLayout'
+import ErrorBoundary from '@/components/shared/ErrorBoundary'
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const FriendsCenter = lazy(() => import('@/pages/FriendsCenter'))
@@ -49,8 +50,10 @@ const routes = [
 export default function App() {
   const element = useRoutes(routes)
   return (
-    <AgentProvider>
-      <Suspense fallback={<PageLoader />}>{element}</Suspense>
-    </AgentProvider>
+    <ErrorBoundary>
+      <AgentProvider>
+        <Suspense fallback={<PageLoader />}>{element}</Suspense>
+      </AgentProvider>
+    </ErrorBoundary>
   )
 }

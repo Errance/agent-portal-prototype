@@ -89,7 +89,7 @@ export const invitees: Invitee[] = [
       uid: u.uid,
       identityType: u.identityType,
       depositStatus: dep,
-      tradeStatus: (traded ? 'traded' : 'not_traded') as const,
+      tradeStatus: (traded ? 'traded' : 'not_traded') as 'traded' | 'not_traded',
       registeredAt: date(pickInt(0, 89)),
       remark: i % 5 === 0 ? `备注${i}` : '',
       flatFeeCommUsdt: traded ? rand(5, 400) : 0,

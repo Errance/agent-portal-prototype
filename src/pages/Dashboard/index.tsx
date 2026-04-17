@@ -1,9 +1,10 @@
 import { Box, Flex, Text, HStack, Grid } from '@chakra-ui/react'
-import { Link } from 'react-router-dom'
 import StatCard from '@/components/shared/StatCard'
 import DataTable, { type Column } from '@/components/shared/DataTable'
+import { ChakraLink } from '@/components/shared/styled'
 import { useAgent } from '@/context/AgentContext'
 import { useDashboardKpi, useInviteCodeSummary } from '@/api/queries/dashboard'
+import { toError } from '@/api/client'
 import type { InviteCodeSummary, AgentLevel } from '@/types/domain'
 
 const LEVEL_CONFIG: Record<AgentLevel, { name: string; bg: string; color: string; border: string; glow: string }> = {
@@ -60,9 +61,9 @@ export default function Dashboard() {
           <Text fontFamily="ISB" fontSize="18px" color="text.100" mb="8px" letterSpacing="-0.5px">开启您的推广之旅</Text>
           <Text fontSize="14px" color="gray.100" mb="20px">创建您的第一个推广码，开始发展下级用户并获取返佣收益。</Text>
           <HStack gap="12px">
-            {/* H3 修复：不再把 Box as="button" 包在 Link 里；Link 自身渲染为 <a> 并套按钮样式 */}
-            <Box
-              as={Link} to="/invite"
+            {/* H3 修复：不再把 Box as="button" 包在 Link 里；ChakraLink 渲染为 <a> 并套按钮样式 */}
+            <ChakraLink
+              to="/invite"
               display="inline-block" textDecoration="none"
               px="24px" py="10px" bg="theme" color="#FFFFFF"
               borderRadius="4px" fontSize="13px" fontFamily="ISB"
@@ -70,7 +71,7 @@ export default function Dashboard() {
               _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}
             >
               创建推广码
-            </Box>
+            </ChakraLink>
             <Box as="button" px="24px" py="10px" bg="transparent" color="text.100"
               border="1px solid" borderColor="border.100"
               borderRadius="4px" fontSize="13px" cursor="pointer"
@@ -87,7 +88,7 @@ export default function Dashboard() {
           <StatCard key={i} label="" value="" isLoading />
         ))}
         {kpiQ.isError && !kpiQ.isLoading && (
-          <StatCard label="加载失败" value="" error={(kpiQ.error as Error).message} />
+          <StatCard label="加载失败" value="" error={toError(kpiQ.error).message} />
         )}
         {kpiQ.data?.map(kpi => (
           <StatCard
@@ -103,8 +104,8 @@ export default function Dashboard() {
       <Box>
         <Flex justify="space-between" align="center" mb="24px">
           <Text fontFamily="ISB" fontSize="20px" color="text.100" letterSpacing="-0.5px">推广概览</Text>
-          <Box
-            as={Link} to="/invite"
+          <ChakraLink
+            to="/invite"
             display="inline-block" textDecoration="none"
             px="20px" py="8px" bg="transparent" color="text.100"
             border="1px solid" borderColor="border.100"
@@ -113,7 +114,7 @@ export default function Dashboard() {
             _hover={{ bg: 'bg.200', borderColor: 'border.200' }}
           >
             管理推广码
-          </Box>
+          </ChakraLink>
         </Flex>
         <DataTable
           data={summaryQ.data ?? []}
@@ -121,7 +122,7 @@ export default function Dashboard() {
           pageSize={10}
           getRowKey={r => r.code}
           isLoading={summaryQ.isLoading}
-          error={summaryQ.isError ? { message: (summaryQ.error as Error).message, retry: () => summaryQ.refetch() } : null}
+          error={summaryQ.isError ? { message: toError(summaryQ.error).message, retry: () => summaryQ.refetch() } : null}
         />
       </Box>
     </Box>

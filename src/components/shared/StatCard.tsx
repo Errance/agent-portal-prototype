@@ -1,4 +1,5 @@
 import { Box, Text, Flex } from '@chakra-ui/react'
+import { fmtAmount } from '@/utils/fmtAmount'
 
 interface StatCardProps {
   label: string
@@ -11,9 +12,8 @@ interface StatCardProps {
 
 export default function StatCard({ label, value, unit, changePercent, isLoading, error }: StatCardProps) {
   const isPositive = changePercent !== undefined && changePercent >= 0
-  const formatted = typeof value === 'number'
-    ? value.toLocaleString('en-US', { minimumFractionDigits: value % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })
-    : value
+  // 审计 M3：金额走 fmtAmount（Decimal.js-light 保精度 + 千分位）；非数值原样展示
+  const formatted = typeof value === 'number' ? fmtAmount(value, { style: 'thousand' }) : value
 
   return (
     <Box

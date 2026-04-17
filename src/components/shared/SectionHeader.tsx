@@ -1,7 +1,7 @@
-import { Flex, Text, type BoxProps } from '@chakra-ui/react'
+import { Flex, Text, type FlexProps } from '@chakra-ui/react'
 import type { ReactNode } from 'react'
 
-interface Props extends BoxProps {
+interface Props extends Omit<FlexProps, 'title'> {
   title: string
   subtitle?: string
   action?: ReactNode

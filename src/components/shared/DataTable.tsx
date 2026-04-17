@@ -47,11 +47,23 @@ export default function DataTable<T>({
     const col = columns.find(c => c.key === sortKey)
     if (!col?.sortKey) return data
     const fn = col.sortKey
-    return [...data].sort((a, b) => {
-      const va = fn(a); const vb = fn(b)
-      if (typeof va === 'number' && typeof vb === 'number') return sortAsc ? va - vb : vb - va
-      return sortAsc ? String(va).localeCompare(String(vb)) : String(vb).localeCompare(String(va))
+    // 审计 M6：NaN/undefined 归一化 + 二级 key (原始 index) 保证稳定排序
+    const indexed = data.map((row, i) => ({ row, i }))
+    indexed.sort((a, b) => {
+      const va = fn(a.row); const vb = fn(b.row)
+      let cmp: number
+      if (typeof va === 'number' && typeof vb === 'number') {
+        const na = Number.isFinite(va) ? va : -Infinity
+        const nb = Number.isFinite(vb) ? vb : -Infinity
+        cmp = na - nb
+      } else {
+        cmp = String(va ?? '').localeCompare(String(vb ?? ''))
+      }
+      if (cmp !== 0) return sortAsc ? cmp : -cmp
+      // 稳定排序：cmp===0 时保持原序
+      return a.i - b.i
     })
+    return indexed.map(x => x.row)
   }, [data, sortKey, sortAsc, columns])
 
   const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize))
@@ -73,10 +85,12 @@ export default function DataTable<T>({
         <Table.Root size="sm" variant="line" stickyHeader>
           <Table.Header>
             <Table.Row>
-              {columns.map((col, ci) => (
+              {columns.map((col, ci) => {
+                const isStickyRight = stickyRight && ci === columns.length - 1
+                return (
                 <Table.ColumnHeader
                   key={col.key}
-                  bg="rgba(0,0,0,0.02)"
+                  bg={isStickyRight ? 'bg.200' : 'rgba(0,0,0,0.02)'}
                   border={0}
                   borderBottom="1px solid"
                   borderColor="border.100"
@@ -109,9 +123,8 @@ export default function DataTable<T>({
                   _hover={col.sortable ? { color: 'text.100', bg: 'rgba(0,0,0,0.04)' } : {}}
                   _focusVisible={col.sortable ? { outline: '2px solid', outlineColor: 'theme', outlineOffset: '-2px' } : {}}
                   transition="all 0.2s"
-                  {...(stickyRight && ci === columns.length - 1 ? {
+                  {...(isStickyRight ? {
                     position: 'sticky' as const, right: 0, zIndex: 2,
-                    bg: 'bg.200',
                     boxShadow: '-8px 0 16px rgba(0,0,0,0.04)',
                   } : {})}
                 >
@@ -122,7 +135,7 @@ export default function DataTable<T>({
                     )}
                   </Flex>
                 </Table.ColumnHeader>
-              ))}
+              )})}
             </Table.Row>
           </Table.Header>
           <Table.Body>

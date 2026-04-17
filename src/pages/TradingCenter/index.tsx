@@ -7,6 +7,7 @@ import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, Input, FilterItem } from '@/components/shared/FilterBar'
 import { useAgent } from '@/context/AgentContext'
 import { usePerpPositions, usePerpHistory, useEventHistory } from '@/api/queries/trading'
+import { toError } from '@/api/client'
 import type { PerpPosition, PerpOrder, EventOrder } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
@@ -351,7 +352,7 @@ export default function TradingCenter() {
                   columns={allPerpPosCols.filter(c => !hiddenCols.has(c.key))}
                   getRowKey={(r, i) => `${r.uid}-${r.pair}-${i}`}
                   isLoading={perpPosQ.isLoading}
-                  error={perpPosQ.isError ? { message: (perpPosQ.error as Error).message, retry: () => perpPosQ.refetch() } : null}
+                  error={perpPosQ.isError ? { message: toError(perpPosQ.error).message, retry: () => perpPosQ.refetch() } : null}
                 />
               )}
             </Tabs.Content>
@@ -362,7 +363,7 @@ export default function TradingCenter() {
                   columns={allPerpHistCols.filter(c => !hiddenCols.has(c.key))}
                   getRowKey={(r, i) => `${r.uid}-${r.time}-${i}`}
                   isLoading={perpHistQ.isLoading}
-                  error={perpHistQ.isError ? { message: (perpHistQ.error as Error).message, retry: () => perpHistQ.refetch() } : null}
+                  error={perpHistQ.isError ? { message: toError(perpHistQ.error).message, retry: () => perpHistQ.refetch() } : null}
                 />
               )}
             </Tabs.Content>
@@ -373,7 +374,7 @@ export default function TradingCenter() {
                   columns={allEventCols.filter(c => !hiddenCols.has(c.key))}
                   getRowKey={(r, i) => `${r.uid}-${r.time}-${i}`}
                   isLoading={eventQ.isLoading}
-                  error={eventQ.isError ? { message: (eventQ.error as Error).message, retry: () => eventQ.refetch() } : null}
+                  error={eventQ.isError ? { message: toError(eventQ.error).message, retry: () => eventQ.refetch() } : null}
                 />
               )}
             </Tabs.Content>

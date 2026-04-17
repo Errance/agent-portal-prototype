@@ -14,6 +14,27 @@ export class ApiError extends Error {
   }
 }
 
+/**
+ * 错误对象归一化（审计 M7）。页面里 react-query 的 `error` 是 `unknown`，
+ * 直接 `(q.error as Error).message` 存在真的不是 Error 的风险（比如字符串、object）。
+ * 这个守卫：
+ * - 是 ApiError / Error → 直接返回
+ * - 是字符串 → 包成 Error
+ * - 其它 → 返回兜底 Error
+ */
+export function toError(err: unknown, fallback = '未知错误'): Error {
+  if (err instanceof Error) return err
+  if (typeof err === 'string') return new Error(err)
+  if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+    return new Error((err as { message: string }).message)
+  }
+  return new Error(fallback)
+}
+
+export function isApiError(err: unknown): err is ApiError {
+  return err instanceof ApiError
+}
+
 export interface RequestOptions extends Omit<RequestInit, 'body' | 'signal'> {
   body?: unknown
   signal?: AbortSignal

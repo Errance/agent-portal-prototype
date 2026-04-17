@@ -6,8 +6,10 @@ import { FilterBar, Input, Select, FilterItem, DateRangeInput } from '@/componen
 import PillButton from '@/components/shared/PillButton'
 import ModalShell from '@/components/shared/ModalShell'
 import RateFormInput from '@/components/shared/RateFormInput'
+import { ChakraInput } from '@/components/shared/styled'
 import { useAgent } from '@/context/AgentContext'
 import { useInviteCodes, useInviteStats } from '@/api/queries/invite'
+import { toError } from '@/api/client'
 import type { InviteCode } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
@@ -285,7 +287,32 @@ export default function InvitePromotion() {
         </FilterItem>
       </FilterBar>
 
-      <InlineStatsBar stats={globalStatsData} />
+      {/* 审计 M12：stats loading/error 与 DataTable 对齐 */}
+      {statsQ.isError ? (
+        <Box bg="red.200" border="1px solid" borderColor="red.100" borderRadius="8px" px="16px" py="12px" mb="16px">
+          <Text fontSize="13px" color="red.100">
+            全局统计加载失败：{toError(statsQ.error).message}
+            <Text as="span" ml="12px" cursor="pointer" textDecoration="underline"
+              onClick={() => statsQ.refetch()}>重试</Text>
+          </Text>
+        </Box>
+      ) : statsQ.isLoading ? (
+        <Box bg="rgba(0,0,0,0.02)" border="1px solid" borderColor="border.100"
+          borderRadius="8px" px="20px" py="14px" mb="16px"
+          css={{
+            background: 'linear-gradient(90deg, rgba(0,0,0,0.03) 0%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.03) 100%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.4s infinite',
+            '@keyframes shimmer': {
+              '0%': { backgroundPosition: '200% 0' },
+              '100%': { backgroundPosition: '-200% 0' },
+            },
+          }}
+          h="52px"
+        />
+      ) : (
+        <InlineStatsBar stats={globalStatsData} />
+      )}
       {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStatsData} />}
 
       <DataTable
@@ -294,7 +321,7 @@ export default function InvitePromotion() {
         stickyRight
         getRowKey={r => r.code}
         isLoading={codesQ.isLoading}
-        error={codesQ.isError ? { message: (codesQ.error as Error).message, retry: () => codesQ.refetch() } : null}
+        error={codesQ.isError ? { message: toError(codesQ.error).message, retry: () => codesQ.refetch() } : null}
       />
 
       <ModalShell open={showCreate} onClose={() => setShowCreate(false)} width="480px">
@@ -305,9 +332,9 @@ export default function InvitePromotion() {
           <RateFormInput label="事件合约下级返佣比例（%）" value={eventRate} onChange={setEventRate} step="0.01" error={errors.event} extra={`上限: ${currentEventRate}%`} />
           <Box>
             <Text fontSize="12px" color="gray.100" mb="8px" textTransform="uppercase" letterSpacing="0.5px">备注（可选）</Text>
-            <Box as="input" w="100%" h="40px" bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="4px" px={3}
+            <ChakraInput w="100%" h="40px" bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="4px" px={3}
               fontSize="14px" color="text.100" outline="none"
-              value={cRemark} onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCRemark(e.target.value)}
+              value={cRemark} onChange={(e) => setCRemark(e.target.value)}
               transition="all 0.2s"
               _focus={{ borderColor: 'theme', boxShadow: '0 0 0 1px rgba(10,186,181,0.5)' }} />
           </Box>

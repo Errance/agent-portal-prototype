@@ -5,6 +5,7 @@ import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
 import { FilterBar, Select, Input, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
 import { useTransferRecords } from '@/api/queries/transfers'
+import { toError } from '@/api/client'
 import type { TransferRecord } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
@@ -162,7 +163,7 @@ export default function OnchainTransfers() {
           columns={columns}
           getRowKey={(r, i) => `${r.uid}-${r.time}-${i}`}
           isLoading={q.isLoading}
-          error={q.isError ? { message: (q.error as Error).message, retry: () => q.refetch() } : null}
+          error={q.isError ? { message: toError(q.error).message, retry: () => q.refetch() } : null}
         />
       </Box>
     </Box>

@@ -1,4 +1,5 @@
 import { Flex, Text, Box } from '@chakra-ui/react'
+import { fmtAmount } from '@/utils/fmtAmount'
 
 interface StatItem {
   label: string
@@ -12,10 +13,9 @@ interface InlineStatsBarProps {
 }
 
 export default function InlineStatsBar({ title, stats }: InlineStatsBarProps) {
+  // 审计 M4：统一走 fmtAmount（Decimal 精度 + 千分位），与 StatCard 对齐
   const fmt = (v: string | number) =>
-    typeof v === 'number'
-      ? v.toLocaleString('en-US', { minimumFractionDigits: v % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })
-      : v
+    typeof v === 'number' ? fmtAmount(v, { style: 'thousand' }) : v
 
   return (
     <Box
