@@ -3,6 +3,7 @@ import { lazy, Suspense } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import FrozenBanner from './FrozenBanner'
 import GlobalFooter from './GlobalFooter'
+import UserMenu from './UserMenu'
 import { useAgent } from '@/context/AgentContext'
 
 const DemoControls = import.meta.env.DEV ? lazy(() => import('./DemoControls')) : null
@@ -104,6 +105,8 @@ export default function AppLayout() {
               )
             })}
           </Flex>
+
+          <UserMenu />
         </Flex>
       </Box>
 

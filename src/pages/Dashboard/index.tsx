@@ -4,8 +4,10 @@ import DataTable, { type Column } from '@/components/shared/DataTable'
 import PillButton from '@/components/shared/PillButton'
 import { ChakraLink } from '@/components/shared/styled'
 import { useAgent } from '@/context/AgentContext'
+import { useAuth } from '@/auth'
 import { useDashboardKpi, useInviteCodeSummary } from '@/api/queries/dashboard'
 import { toError } from '@/api/client'
+import { maskAddress, maskEmail } from '@/utils/mask'
 import type { InviteCodeSummary, AgentLevel } from '@/types/domain'
 
 const LEVEL_CONFIG: Record<
@@ -107,7 +109,16 @@ const columns: Column<InviteCodeSummary>[] = [
 
 export default function Dashboard() {
   const { isNewAgent, setIsNewAgent, agentName, agentLevel } = useAgent()
+  const auth = useAuth()
   const levelStyle = LEVEL_CONFIG[agentLevel] ?? LEVEL_FALLBACK
+
+  // 占位显示：优先 Privy 登录身份（邮箱 mask > 地址 mask），fallback 到 mock agentName。
+  // /agent/profile 真实接入后把这段换成后端返回的真实 agentName。
+  const displayName = auth.user?.email
+    ? maskEmail(auth.user.email)
+    : auth.user?.address
+      ? maskAddress(auth.user.address)
+      : agentName
 
   const kpiQ = useDashboardKpi()
   const summaryQ = useInviteCodeSummary()
@@ -116,7 +127,7 @@ export default function Dashboard() {
     <Box>
       <Flex align="center" gap="16px" mb="32px">
         <Text fontSize="28px" fontFamily="ISB" color="text.100" letterSpacing="-0.5px">
-          您好，{agentName}
+          您好，{displayName}
         </Text>
         <Flex
           align="center"
