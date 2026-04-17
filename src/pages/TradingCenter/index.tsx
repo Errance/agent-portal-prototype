@@ -9,7 +9,14 @@ import { FilterBar, Select, Input, FilterItem } from '@/components/shared/Filter
 import { useAgent } from '@/context/AgentContext'
 import { usePerpPositions, usePerpHistory, useEventHistory } from '@/api/queries/trading'
 import { toError } from '@/api/client'
-import type { PerpPosition, PerpOrder, EventOrder } from '@/types/domain'
+import type {
+  EventHistorySummary,
+  EventOrder,
+  PerpOrder,
+  PerpPosition,
+  PositionsSummary,
+  TradeHistorySummary,
+} from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
 import { maskUid, truncateText } from '@/utils/mask'
@@ -18,11 +25,17 @@ const allPerpPosCols: Column<PerpPosition>[] = [
   {
     key: 'user',
     label: '用户 (UID)',
+    // Q3：UID 下方追加 VIP tier 小字（如后端返回），再显示备注
     render: r => (
       <Box>
         <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.uid}>
           {maskUid(r.uid)}
         </Text>
+        {r.vipTier && (
+          <Text fontSize="12px" color="gray.100" mt="2px">
+            {r.vipTier}
+          </Text>
+        )}
         {r.remark && (
           <Text fontSize="12px" color="gray.200" mt="2px" title={r.remark}>
             {truncateText(r.remark, 18)}
@@ -254,10 +267,41 @@ const allEventCols: Column<EventOrder>[] = [
   },
 ]
 
+/* ========== summary → InlineStatsBar 三列 ========== */
+
+function buildPositionsStats(s: PositionsSummary | undefined, rowCount?: number) {
+  return [
+    { label: '持仓数', value: s ? s.positionCount : (rowCount ?? 0) },
+    {
+      label: '持仓市值',
+      value: s ? fmtAmount(s.positionMarketValueUsdt) : '—',
+      unit: 'USDT',
+    },
+    { label: '未实现盈亏', value: s ? fmtAmount(s.unrealizedPnlUsdt) : '—', unit: 'USDT' },
+  ]
+}
+
+function buildTradeHistoryStats(s: TradeHistorySummary | undefined, rowCount?: number) {
+  return [
+    { label: '订单数', value: s ? s.orderCount : (rowCount ?? 0) },
+    { label: '交易量', value: s ? fmtAmount(s.tradeVolumeUsdt) : '—', unit: 'USDT' },
+    { label: '手续费', value: s ? fmtAmount(s.feeUsdt) : '—', unit: 'USDT' },
+  ]
+}
+
+function buildEventHistoryStats(s: EventHistorySummary | undefined, rowCount?: number) {
+  return [
+    { label: '订单数', value: s ? s.orderCount : (rowCount ?? 0) },
+    { label: '下注额', value: s ? fmtAmount(s.betAmountUsdt) : '—', unit: 'USDT' },
+    { label: '盈亏', value: s ? fmtAmount(s.pnlUsdt) : '—', unit: 'USDT' },
+  ]
+}
+
 /**
- * 单次 reduce 聚合（审计 P5 / C2：数值经 toNumber 防御后端字符串）。
+ * 客户端"筛选结果"聚合（Q5：后端 summary 为全局口径，不随前端筛选变化）。
+ * 这里仅负责"当前筛选"条的展示聚合。
  */
-function statsForPositions(list: PerpPosition[]) {
+function filteredStatsPositions(list: readonly PerpPosition[]) {
   let marketValue = 0,
     upnl = 0
   for (const r of list) {
@@ -271,7 +315,7 @@ function statsForPositions(list: PerpPosition[]) {
   ]
 }
 
-function statsForOrders(list: PerpOrder[]) {
+function filteredStatsOrders(list: readonly PerpOrder[]) {
   let volume = 0,
     fee = 0
   for (const r of list) {
@@ -285,7 +329,7 @@ function statsForOrders(list: PerpOrder[]) {
   ]
 }
 
-function statsForEvents(list: EventOrder[]) {
+function filteredStatsEvents(list: readonly EventOrder[]) {
   let amount = 0,
     pnl = 0
   for (const r of list) {
@@ -314,10 +358,10 @@ export default function TradingCenter() {
   const perpPosQ = usePerpPositions()
   const perpHistQ = usePerpHistory()
   const eventQ = useEventHistory()
-  // 稳定引用（react-hooks/exhaustive-deps）：避免 ?? [] 每次返回新数组
-  const perpPositions = useMemo(() => perpPosQ.data ?? [], [perpPosQ.data])
-  const perpHistory = useMemo(() => perpHistQ.data ?? [], [perpHistQ.data])
-  const eventHistory = useMemo(() => eventQ.data ?? [], [eventQ.data])
+
+  const perpPositions = useMemo(() => perpPosQ.data?.rows ?? [], [perpPosQ.data])
+  const perpHistory = useMemo(() => perpHistQ.data?.rows ?? [], [perpHistQ.data])
+  const eventHistory = useMemo(() => eventQ.data?.rows ?? [], [eventQ.data])
 
   const isSummary = tradeVisibility === 'summary'
   const isHidden = tradeVisibility === 'hidden'
@@ -331,7 +375,6 @@ export default function TradingCenter() {
     pair !== 'all' ||
     subType !== 'all'
 
-  // 稳定 filterFn 以满足 exhaustive-deps（uid/remark 变化时才重建）
   const filterFn = useCallback(
     <T extends { uid: string; remark: string }>(list: T[]) => {
       let res = list
@@ -342,23 +385,31 @@ export default function TradingCenter() {
     [uid, remark],
   )
 
-  const filteredPerpPos = useMemo(() => filterFn(perpPositions), [filterFn, perpPositions])
-  const filteredPerpHist = useMemo(() => filterFn(perpHistory), [filterFn, perpHistory])
-  const filteredEvent = useMemo(() => filterFn(eventHistory), [filterFn, eventHistory])
+  const filteredPerpPos = useMemo(() => filterFn([...perpPositions]), [filterFn, perpPositions])
+  const filteredPerpHist = useMemo(() => filterFn([...perpHistory]), [filterFn, perpHistory])
+  const filteredEvent = useMemo(() => filterFn([...eventHistory]), [filterFn, eventHistory])
 
+  // Q5：全局 stats 走后端 summary（tab 对应的那份）；兜底用行数
   const globalStatsForTab = useMemo(() => {
-    if (tab === '0') return statsForPositions(perpPositions)
-    if (tab === '1') return statsForOrders(perpHistory)
-    return statsForEvents(eventHistory)
-  }, [tab, perpPositions, perpHistory, eventHistory])
+    if (tab === '0') return buildPositionsStats(perpPosQ.data?.summary, perpPositions.length)
+    if (tab === '1') return buildTradeHistoryStats(perpHistQ.data?.summary, perpHistory.length)
+    return buildEventHistoryStats(eventQ.data?.summary, eventHistory.length)
+  }, [
+    tab,
+    perpPosQ.data,
+    perpHistQ.data,
+    eventQ.data,
+    perpPositions.length,
+    perpHistory.length,
+    eventHistory.length,
+  ])
 
   const filteredStatsForTab = useMemo(() => {
-    if (tab === '0') return statsForPositions(filteredPerpPos)
-    if (tab === '1') return statsForOrders(filteredPerpHist)
-    return statsForEvents(filteredEvent)
+    if (tab === '0') return filteredStatsPositions(filteredPerpPos)
+    if (tab === '1') return filteredStatsOrders(filteredPerpHist)
+    return filteredStatsEvents(filteredEvent)
   }, [tab, filteredPerpPos, filteredPerpHist, filteredEvent])
 
-  // 早期 return 必须在所有 hooks 之后（react-hooks/rules-of-hooks）
   if (isHidden) return <Navigate to="/" replace />
 
   const tabTrigger = (val: string, label: string) => (
@@ -397,7 +448,9 @@ export default function TradingCenter() {
             交易笔数
           </Text>
           <Text fontSize="32px" fontFamily="ISB" color="text.100" lineHeight="1">
-            {perpPositions.length + perpHistory.length + eventHistory.length}
+            {(perpPosQ.data?.summary?.positionCount ?? perpPositions.length) +
+              (perpHistQ.data?.summary?.orderCount ?? perpHistory.length) +
+              (eventQ.data?.summary?.orderCount ?? eventHistory.length)}
           </Text>
         </Box>
         <Box>
@@ -412,8 +465,8 @@ export default function TradingCenter() {
           </Text>
           <Text fontSize="32px" fontFamily="ISB" color="text.100" lineHeight="1">
             {fmtAmount(
-              perpHistory.reduce((s, r) => s + toNumber(r.price) * toNumber(r.quantity), 0) +
-                eventHistory.reduce((s, r) => s + toNumber(r.amount), 0),
+              toNumber(perpHistQ.data?.summary?.tradeVolumeUsdt) +
+                toNumber(eventQ.data?.summary?.betAmountUsdt),
               { style: 'thousand' },
             )}
           </Text>

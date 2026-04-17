@@ -1,40 +1,92 @@
 import { useQuery } from '@tanstack/react-query'
-import { mockOrFetch } from '../config'
 import { apiFetch } from '../client'
-import type { PerpPosition, PerpOrder, EventOrder } from '@/types/domain'
+import {
+  mapEventHistorySummary,
+  mapEventOrderRow,
+  mapPerpOrderRow,
+  mapPerpPositionRow,
+  mapPositionsSummary,
+  mapTradeHistorySummary,
+} from '../mappers'
+import { buildListQuery, mapPagedMeta, type PagedResult, type RawPagedResponse } from './_paging'
+import type {
+  EventHistorySummary,
+  EventOrder,
+  PerpOrder,
+  PerpPosition,
+  PositionsSummary,
+  TradeHistorySummary,
+} from '@/types/domain'
 
-export function usePerpPositions() {
-  return useQuery<PerpPosition[]>({
-    queryKey: ['trading', 'perpPositions'],
-    queryFn: () =>
-      mockOrFetch(
-        async () => (await import('@/mock/data')).perpPositions,
-        () => apiFetch<PerpPosition[]>('/agent/trading/perp/positions'),
-      ),
+type RawAny = Record<string, unknown>
+
+export interface PositionsFilters {
+  uid?: string
+  remark?: string
+  referral_code?: string
+  side?: 'long' | 'short'
+  symbol?: string
+  from?: string
+  to?: string
+}
+
+/** GET /agent/positions（文档 §3.1） */
+export function usePerpPositions(filters: PositionsFilters = {}) {
+  return useQuery<PagedResult<PerpPosition, PositionsSummary>>({
+    queryKey: ['trading', 'perpPositions', filters],
+    queryFn: async () => {
+      const qs = buildListQuery(filters)
+      const raw = await apiFetch<RawPagedResponse<RawAny, RawAny>>(`/agent/positions?${qs}`)
+      return {
+        rows: (raw.data ?? []).map(mapPerpPositionRow),
+        meta: mapPagedMeta(raw),
+        summary: raw.summary ? mapPositionsSummary(raw.summary) : undefined,
+      }
+    },
     staleTime: 15_000,
   })
 }
 
-export function usePerpHistory() {
-  return useQuery<PerpOrder[]>({
-    queryKey: ['trading', 'perpHistory'],
-    queryFn: () =>
-      mockOrFetch(
-        async () => (await import('@/mock/data')).perpHistory,
-        () => apiFetch<PerpOrder[]>('/agent/trading/perp/history'),
-      ),
+export interface TradeHistoryFilters extends PositionsFilters {
+  trade_sub_type?: 'open' | 'close' | 'liquidation'
+}
+
+/** GET /agent/trade-history（文档 §3.2） */
+export function usePerpHistory(filters: TradeHistoryFilters = {}) {
+  return useQuery<PagedResult<PerpOrder, TradeHistorySummary>>({
+    queryKey: ['trading', 'perpHistory', filters],
+    queryFn: async () => {
+      const qs = buildListQuery(filters)
+      const raw = await apiFetch<RawPagedResponse<RawAny, RawAny>>(`/agent/trade-history?${qs}`)
+      return {
+        rows: (raw.data ?? []).map(mapPerpOrderRow),
+        meta: mapPagedMeta(raw),
+        summary: raw.summary ? mapTradeHistorySummary(raw.summary) : undefined,
+      }
+    },
     staleTime: 30_000,
   })
 }
 
-export function useEventHistory() {
-  return useQuery<EventOrder[]>({
-    queryKey: ['trading', 'eventHistory'],
-    queryFn: () =>
-      mockOrFetch(
-        async () => (await import('@/mock/data')).eventHistory,
-        () => apiFetch<EventOrder[]>('/agent/trading/event/history'),
-      ),
+export interface EventHistoryFilters {
+  uid?: string
+  remark?: string
+  referral_code?: string
+}
+
+/** GET /agent/event-history（文档 §3.3） */
+export function useEventHistory(filters: EventHistoryFilters = {}) {
+  return useQuery<PagedResult<EventOrder, EventHistorySummary>>({
+    queryKey: ['trading', 'eventHistory', filters],
+    queryFn: async () => {
+      const qs = buildListQuery(filters)
+      const raw = await apiFetch<RawPagedResponse<RawAny, RawAny>>(`/agent/event-history?${qs}`)
+      return {
+        rows: (raw.data ?? []).map(mapEventOrderRow),
+        meta: mapPagedMeta(raw),
+        summary: raw.summary ? mapEventHistorySummary(raw.summary) : undefined,
+      }
+    },
     staleTime: 30_000,
   })
 }

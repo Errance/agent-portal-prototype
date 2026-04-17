@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Box, Flex, Text } from '@chakra-ui/react'
 import PillButton from '@/components/shared/PillButton'
-import { useAuth } from '@/auth'
-import { maskAddress, maskEmail } from '@/utils/mask'
+import { useAuth, getAuthDisplayName } from '@/auth'
+import { emitAuthToast } from '@/auth/authEvents'
+import { copyFailureMessage, copyText } from '@/utils/clipboard'
 
 /**
  * 顶栏右侧：用户身份 + 下拉菜单（含完整邮箱/地址 + 复制 + 退出登录）。
@@ -41,18 +42,20 @@ export default function UserMenu() {
 
   const email = auth.user.email
   const address = auth.user.address
-  const triggerLabel = email ? maskEmail(email) : address ? maskAddress(address) : '已登录'
+  // 统一 displayName（含 userId 兜底，避免 Privy user 未 hydrate 时显示"已登录"）
+  const triggerLabel = getAuthDisplayName(auth.user)
 
   const handleCopy = async () => {
     if (!address) return
-    try {
-      await navigator.clipboard.writeText(address)
+    const res = await copyText(address)
+    if (res.ok) {
       setCopied(true)
       if (copyTimerRef.current) clearTimeout(copyTimerRef.current)
       copyTimerRef.current = setTimeout(() => setCopied(false), 2000)
-    } catch {
-      // 剪贴板权限被拒：忽略，UI 不给额外反馈（顶栏小组件不适合强阻断）
+      return
     }
+    // 失败不再静默（S5）：弹 toast 让用户知道发生了什么 / 可以做什么
+    emitAuthToast({ kind: 'error', message: copyFailureMessage(res.reason) })
   }
 
   const handleLogout = async () => {

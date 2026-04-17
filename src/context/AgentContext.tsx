@@ -1,5 +1,6 @@
 import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { useAgentStatus } from '@/hooks/useAgentStatus'
+import { useAgentProfile } from '@/api/queries/profile'
 import { useAuth } from '@/auth'
 
 /**
@@ -35,9 +36,20 @@ const AgentContext = createContext<AgentContextType | null>(null)
 export function AgentProvider({ children }: { children: ReactNode }) {
   const status = useAgentStatus()
   const auth = useAuth()
+  // currentFlatFeeRate / currentProfitShareRate / currentEventRate 优先取
+  // /agent/profile 真实值；pending / error / 未登录时 fallback 到 mock agentConfig
+  // 返回的默认值（避免组件等待 profile 阻塞渲染）。
+  const profileQ = useAgentProfile()
+  const profile = profileQ.data
   const value = useMemo<AgentContextType>(
-    () => ({ ...status, userId: auth.user?.userId ?? null }),
-    [status, auth.user],
+    () => ({
+      ...status,
+      currentFlatFeeRate: profile?.currentFlatFeeRate ?? status.currentFlatFeeRate,
+      currentProfitShareRate: profile?.currentProfitShareRate ?? status.currentProfitShareRate,
+      currentEventRate: profile?.currentEventRate ?? status.currentEventRate,
+      userId: auth.user?.userId ?? null,
+    }),
+    [status, profile, auth.user],
   )
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>
 }

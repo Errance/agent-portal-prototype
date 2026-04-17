@@ -1,14 +1,16 @@
-import { API_BASE, BIZ_PF } from '@/api/config'
+import { rawFetch } from '@/api/client'
 
 /**
- * `/login` 专用 HTTP 调用（不走 `apiFetch`，因为 Authorization 格式特殊）。
+ * `/login` 专用调用（不走业务 `apiFetch`，因为 Authorization 头是 JSON 字符串
+ * 而不是 `Bearer <jwt>`；此阶段也没有业务 JWT 可用）。
  *
  * 协议来源：主站 surf-one `web/src/components/Auth/useMyLogin.ts`（Privy 登录完成后换业务 JWT）。
- * 待后端二次确认（见 docs/BACKEND_PENDING_INTERFACES.md §1）。
+ * SIT 实测细节记录在 docs/BACKEND_PENDING_INTERFACES.md §2。
  *
- * 和 `apiFetch` 不同之处：
- * - Authorization 头是 JSON 字符串（非 Bearer），body 为 `null`
- * - 不重用 `currentTokenGetter`（那是业务 API 的 Bearer，`/login` 阶段还没有 JWT）
+ * 和 `apiFetch` 的区别：
+ * - Authorization 头是 JSON 字符串（非 Bearer）
+ * - body 为空
+ * - 无 `api:unauthorized` 联动（/login 失败不是"会话失效"，而是换取失败）
  */
 
 export interface LoginPayload {
@@ -19,10 +21,34 @@ export interface LoginPayload {
   referral_code?: string | null
 }
 
+/**
+ * 后端 `/login` 的 data 字段实际形状（sit 实测 2026-04-17）：
+ *
+ * ```json
+ * {
+ *   "errno": "200",
+ *   "msg": "success",
+ *   "data": {
+ *     "access_token": "eyJ...",
+ *     "wallet_approve_state": true
+ *   }
+ * }
+ * ```
+ *
+ * - `access_token`：业务 JWT（HS256），用作后续 `/agent/*` 的 `Authorization: Bearer`
+ * - `wallet_approve_state`：钱包审批状态；当前前端不主动消费，UI 是否分支
+ *   展示待 `/agent/me` 明确后统一处理。
+ */
+interface LoginData {
+  access_token?: string
+  wallet_approve_state?: boolean
+}
+
 interface LoginResponse {
   errno: string | number
   msg?: string
-  data: string | null
+  // 历史协议里 data 是 string，sit 现状是对象；两种都兼容
+  data: string | LoginData | null
 }
 
 export class LoginError extends Error {
@@ -52,29 +78,30 @@ export async function loginToBackend(payload: LoginPayload): Promise<string> {
     ...payload,
   })
 
-  const res = await fetch(`${API_BASE}/login`, {
+  const { status, json } = await rawFetch<LoginResponse>('/login', {
     method: 'POST',
-    // 不带 cookie：主站 axios 默认不带，业务认证全走 Authorization 头。
-    credentials: 'omit',
-    headers: {
-      'Content-Type': 'application/json',
-      'biz-pf': BIZ_PF,
-      LANG: 'zh-cn',
-      Authorization: authorization,
-    },
-    // 主站 axios `data: null` 对应 fetch 无 body；部分后端接受字符串 'null'，若后端要求改这里
+    headers: { Authorization: authorization },
+    // body 主站实现为空；部分后端接受字符串 'null'——如后端要求可改这里
     body: undefined,
   })
 
-  let json: LoginResponse
-  try {
-    json = (await res.json()) as LoginResponse
-  } catch {
-    throw new LoginError(res.status, `登录响应解析失败 (${res.status})`)
+  if (!json) {
+    throw new LoginError(status, `登录响应解析失败 (${status})`)
   }
 
   if (String(json.errno) !== ERRNO_LOGIN_SUCCESS || !json.data) {
     throw new LoginError(json.errno, json.msg || `登录失败 (errno=${json.errno})`)
   }
-  return json.data
+
+  // 兼容：历史协议 data 是 string；sit 现状是 { access_token, ... } 对象
+  const jwt =
+    typeof json.data === 'string'
+      ? json.data
+      : typeof json.data.access_token === 'string'
+        ? json.data.access_token
+        : ''
+  if (!jwt) {
+    throw new LoginError(json.errno, '登录响应缺少 access_token')
+  }
+  return jwt
 }

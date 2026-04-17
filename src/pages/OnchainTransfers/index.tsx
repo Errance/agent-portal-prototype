@@ -3,41 +3,41 @@ import { Box, Text, HStack } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
-import { FilterBar, Select, Input, FilterItem, DateRangeInput } from '@/components/shared/FilterBar'
+import {
+  FilterBar,
+  Select,
+  Input,
+  FilterItem,
+  DateRangeInput,
+} from '@/components/shared/FilterBar'
 import { useTransferRecords } from '@/api/queries/transfers'
 import { toError } from '@/api/client'
-import type { TransferRecord } from '@/types/domain'
+import type { TransferRecord, TransfersSummaryBucket } from '@/types/domain'
 import { fmtAmount } from '@/utils/fmtAmount'
 import { toNumber } from '@/utils/parse'
 import { maskUid } from '@/utils/mask'
 
-interface TransferAgg {
-  depositCount: number
-  depositAmount: number
-  withdrawalCount: number
-  withdrawalAmount: number
-}
-
 /**
- * 单次 reduce 聚合（审计 P5 / C2：所有金额经 toNumber 防御后端字符串）。
+ * 将 TransfersSummaryBucket 映射为页面用的 4 列 KPI 条。
+ * 用在 global（summary.total）和 filtered（summary.filtered）两处；
+ * summary 不存在时返回 "—"，避免读到 NaN。
  */
-function aggregate(list: TransferRecord[]): TransferAgg {
-  let depositCount = 0,
-    depositAmount = 0,
-    withdrawalCount = 0,
-    withdrawalAmount = 0
-  for (const r of list) {
-    if (r.status !== 'success') continue
-    const amt = toNumber(r.amount)
-    if (r.type === 'deposit') {
-      depositCount++
-      depositAmount += amt
-    } else if (r.type === 'withdrawal') {
-      withdrawalCount++
-      withdrawalAmount += amt
-    }
-  }
-  return { depositCount, depositAmount, withdrawalCount, withdrawalAmount }
+function bucketToStats(b: TransfersSummaryBucket | undefined, labelPrefix = '') {
+  const prefix = labelPrefix ? `${labelPrefix} ` : ''
+  return [
+    { label: `${prefix}充值笔数`, value: b ? b.depositCount : '—' },
+    {
+      label: `${prefix}充值金额`,
+      value: b ? fmtAmount(b.depositAmountUsdt) : '—',
+      unit: 'USDT',
+    },
+    { label: `${prefix}提现笔数`, value: b ? b.withdrawCount : '—' },
+    {
+      label: `${prefix}提现金额`,
+      value: b ? fmtAmount(b.withdrawAmountUsdt) : '—',
+      unit: 'USDT',
+    },
+  ]
 }
 
 export default function OnchainTransfers() {
@@ -49,7 +49,8 @@ export default function OnchainTransfers() {
   const [userLevel, setUserLevel] = useState('all')
 
   const q = useTransferRecords()
-  const transferRecords = useMemo(() => q.data ?? [], [q.data])
+  const transferRecords = useMemo(() => q.data?.rows ?? [], [q.data])
+  const summary = q.data?.summary
 
   const hasFilter =
     uid !== '' ||
@@ -60,33 +61,44 @@ export default function OnchainTransfers() {
     dateTo !== ''
 
   const filtered = useMemo(() => {
-    let data = transferRecords
+    let data: TransferRecord[] = [...transferRecords]
     if (uid) data = data.filter(r => r.uid.includes(uid))
     if (type !== 'all') data = data.filter(r => r.type === type)
     if (subType !== 'all') data = data.filter(r => r.subType === subType)
     if (userLevel !== 'all') data = data.filter(r => r.userLevel === userLevel)
+    if (dateFrom) data = data.filter(r => r.time >= dateFrom)
+    if (dateTo) data = data.filter(r => r.time <= `${dateTo}T23:59:59`)
     return data
-  }, [transferRecords, uid, type, subType, userLevel])
+  }, [transferRecords, uid, type, subType, userLevel, dateFrom, dateTo])
 
-  const globalStats = useMemo(() => {
-    const a = aggregate(transferRecords)
-    return [
-      { label: '充值笔数', value: a.depositCount },
-      { label: '充值金额', value: fmtAmount(a.depositAmount), unit: 'USDT' },
-      { label: '提现笔数', value: a.withdrawalCount },
-      { label: '提现金额', value: fmtAmount(a.withdrawalAmount), unit: 'USDT' },
-    ]
-  }, [transferRecords])
+  // 全局 KPI 直接取后端 summary.total（伞下全量，Q5/文档 §4.1）。
+  const globalStats = useMemo(() => bucketToStats(summary?.total), [summary])
 
+  // 筛选结果统计条：优先用后端 summary.filtered；没有时本地 reduce 兜底。
   const filteredStatsData = useMemo(() => {
-    const a = aggregate(filtered)
-    return [
-      { label: '充值', value: a.depositCount },
-      { label: '充值额', value: fmtAmount(a.depositAmount), unit: 'USDT' },
-      { label: '提现', value: a.withdrawalCount },
-      { label: '提现额', value: fmtAmount(a.withdrawalAmount), unit: 'USDT' },
-    ]
-  }, [filtered])
+    if (summary?.filtered) return bucketToStats(summary.filtered)
+    let dc = 0,
+      da = 0,
+      wc = 0,
+      wa = 0
+    for (const r of filtered) {
+      if (r.status !== 'success') continue
+      const amt = toNumber(r.amountUsdt)
+      if (r.type === 'deposit') {
+        dc++
+        da += amt
+      } else {
+        wc++
+        wa += amt
+      }
+    }
+    return bucketToStats({
+      depositCount: dc,
+      depositAmountUsdt: da,
+      withdrawCount: wc,
+      withdrawAmountUsdt: wa,
+    })
+  }, [summary, filtered])
 
   const columns: Column<TransferRecord>[] = useMemo(
     () => [
@@ -157,11 +169,11 @@ export default function OnchainTransfers() {
         align: 'right',
         render: r => (
           <Text fontFamily="ISB" fontSize="16px" color="text.100">
-            {fmtAmount(r.amount, { style: 'thousand' })}
+            {fmtAmount(r.amountUsdt, { style: 'thousand' })}
           </Text>
         ),
         sortable: true,
-        sortKey: r => toNumber(r.amount),
+        sortKey: r => toNumber(r.amountUsdt),
         minW: '140px',
       },
       {

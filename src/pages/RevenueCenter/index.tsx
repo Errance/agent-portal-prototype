@@ -13,24 +13,23 @@ import { maskUid } from '@/utils/mask'
 import { useSanitizedUrlParam } from '@/hooks/useUrlState'
 
 interface CommissionAgg {
-  /** 已发放返佣，按币种分桶（审计 C1：不再做 USDT/USDC 跨币种 1:1 相加） */
+  /** 分币种返佣（审计 C1：不再做 USDT/USDC 跨币种 1:1 相加） */
   totalUsdt: number
   totalUsdc: number
-  /** 交易量（CommissionRecord.tradeVolume 文档约定为 USDT 计价） */
+  /** 交易量以 USDT 计价（后端 trade_volume_usdt 字段） */
   volumeUsdt: number
-  /** 按产品线的分桶（各自保持币种纯度；真实 API 上线后若产品线多币种，需继续拆分） */
   perpUsdt: number
   perpUsdc: number
   eventUsdt: number
   eventUsdc: number
+  count: number
 }
 
 /**
- * 审计 C1 + C2 修复：
- * - 按 `settlementCoin` 分桶，禁止 USDT/USDC 直接相加
- * - 所有数值经 `toNumber` 归一化，防御后端字符串返回
+ * 基于 CommissionRecord（Q2：commissionUsdt + commissionUsdc 两字段）做本地聚合。
+ * 用于 UI 的"筛选结果/分产品线"分桶展示，不影响后端 summary。
  */
-function aggregateCommissions(list: CommissionRecord[], onlyPaid = false): CommissionAgg {
+function aggregateCommissions(list: readonly CommissionRecord[], onlyPaid = false): CommissionAgg {
   let totalUsdt = 0,
     totalUsdc = 0,
     volumeUsdt = 0
@@ -38,26 +37,27 @@ function aggregateCommissions(list: CommissionRecord[], onlyPaid = false): Commi
     perpUsdc = 0,
     eventUsdt = 0,
     eventUsdc = 0
+  let count = 0
   for (const r of list) {
-    volumeUsdt += toNumber(r.tradeVolume)
+    volumeUsdt += toNumber(r.tradeVolumeUsdt)
     if (onlyPaid && r.payoutStatus !== 'paid') continue
-    const amt = toNumber(r.commissionAmount)
-    const isUsdc = r.settlementCoin === 'USDC'
-    if (isUsdc) totalUsdc += amt
-    else totalUsdt += amt
+    const u = toNumber(r.commissionUsdt)
+    const c = toNumber(r.commissionUsdc)
+    totalUsdt += u
+    totalUsdc += c
     if (r.productLine === 'perpetual') {
-      if (isUsdc) perpUsdc += amt
-      else perpUsdt += amt
+      perpUsdt += u
+      perpUsdc += c
     } else if (r.productLine === 'event') {
-      if (isUsdc) eventUsdc += amt
-      else eventUsdt += amt
+      eventUsdt += u
+      eventUsdc += c
     }
+    count++
   }
-  return { totalUsdt, totalUsdc, volumeUsdt, perpUsdt, perpUsdc, eventUsdt, eventUsdc }
+  return { totalUsdt, totalUsdc, volumeUsdt, perpUsdt, perpUsdc, eventUsdt, eventUsdc, count }
 }
 
 export default function RevenueCenter() {
-  // S2：UID 白名单校验，非法值直接忽略
   const preSourceUid = useSanitizedUrlParam('source_uid', /^UID\d{6,}$/)
 
   const [tab, setTab] = useState('0')
@@ -65,11 +65,16 @@ export default function RevenueCenter() {
   const [settlement, setSettlement] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+
+  // Q5：summary 是后端全局口径，客户端只做"筛选结果"的前端聚合。
+  // 因此列表类 query 不带前端筛选条件，页面全量拉一次，后续在 useMemo 内客户端过滤。
   const dailyQ = useDailyRevenue()
   const recordsQ = useCommissionRecords()
   const cfgQ = useSettlementConfig()
-  const daily = useMemo(() => dailyQ.data ?? [], [dailyQ.data])
-  const records = useMemo(() => recordsQ.data ?? [], [recordsQ.data])
+
+  const daily = useMemo(() => dailyQ.data?.rows ?? [], [dailyQ.data])
+  const records = useMemo(() => recordsQ.data?.rows ?? [], [recordsQ.data])
+  const dailySummary = dailyQ.data?.summary
 
   const settlementDisabled = productLine === 'event'
   const effectiveSettlement = settlementDisabled ? 'all' : settlement
@@ -83,6 +88,7 @@ export default function RevenueCenter() {
 
   const paidAgg = useMemo(() => aggregateCommissions(records, true), [records])
 
+  // 顶部"分产品线 / 分币种"明细条。口径：全量 records（Q5 全局）。
   const globalBreakdown = useMemo(() => {
     const a = aggregateCommissions(records)
     return [
@@ -95,7 +101,7 @@ export default function RevenueCenter() {
   }, [records])
 
   const filteredRecords = useMemo(() => {
-    let data = records
+    let data: CommissionRecord[] = [...records]
     if (preSourceUid) data = data.filter(r => r.sourceUid === preSourceUid)
     if (productLine !== 'all')
       data = data.filter(
@@ -103,8 +109,17 @@ export default function RevenueCenter() {
       )
     if (effectiveSettlement !== 'all')
       data = data.filter(r => r.settlementType === effectiveSettlement)
+    if (dateFrom) data = data.filter(r => r.time >= dateFrom)
+    if (dateTo) data = data.filter(r => r.time <= `${dateTo}T23:59:59`)
     return data
-  }, [records, productLine, effectiveSettlement, preSourceUid])
+  }, [records, productLine, effectiveSettlement, preSourceUid, dateFrom, dateTo])
+
+  const filteredDaily = useMemo(() => {
+    let data: DailyRevenue[] = [...daily]
+    if (dateFrom) data = data.filter(r => r.date >= dateFrom)
+    if (dateTo) data = data.filter(r => r.date <= dateTo)
+    return data
+  }, [daily, dateFrom, dateTo])
 
   const filteredStatsData = useMemo(() => {
     const a = aggregateCommissions(filteredRecords)
@@ -112,14 +127,14 @@ export default function RevenueCenter() {
       { label: '返佣(USDT)', value: fmtAmount(a.totalUsdt), unit: 'USDT' },
       { label: '返佣(USDC)', value: fmtAmount(a.totalUsdc), unit: 'USDC' },
       { label: '交易额', value: fmtAmount(a.volumeUsdt), unit: 'USDT' },
-      { label: '记录数', value: filteredRecords.length },
+      { label: '记录数', value: a.count },
     ]
   }, [filteredRecords])
 
   /**
-   * 审计 C1 修复：移除"交易量合计 (等值USDT)"与"FF 手续费合计"两列，
-   * 改为 USDT / USDC 始终分列展示，避免将两种稳定币 1:1 当作合计。
-   * 若后续需要"合计"，应由后端给出预先折算好的 USDT 等值字段。
+   * Q1：后端 daily 行只给 total_trade_volume_usdt 与 flat_fee_fee_total_usdt 两个合计，
+   * 分产品线 / 分币种细节尚未返回；此处先合并为单列"交易量合计 / 手续费合计"。
+   * 待后端补齐 ff/ps/event 分项后，恢复原先按产品线分列。（详见 docs/BACKEND_PENDING_INTERFACES.md）
    */
   const dailyColumns: Column<DailyRevenue>[] = useMemo(
     () => [
@@ -179,67 +194,28 @@ export default function RevenueCenter() {
         sortKey: r => toNumber(r.eventCommission),
       },
       {
-        key: 'ffVol',
-        label: 'FF 交易量',
-        align: 'right',
-        render: r => (
-          <Box>
-            <Text color="text.100" fontFamily="ISB" fontSize="14px">
-              {fmtAmount(r.ffTradeVolUsdt, { style: 'thousand' })} USDT
-            </Text>
-            <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">
-              {fmtAmount(r.ffTradeVolUsdc, { style: 'thousand' })} USDC
-            </Text>
-          </Box>
-        ),
-        sortable: true,
-        sortKey: r => toNumber(r.ffTradeVolUsdt),
-      },
-      {
-        key: 'psVol',
-        label: 'PS 交易量',
-        align: 'right',
-        render: r => (
-          <Box>
-            <Text color="text.100" fontFamily="ISB" fontSize="14px">
-              {fmtAmount(r.psTradeVolUsdt, { style: 'thousand' })} USDT
-            </Text>
-            <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">
-              {fmtAmount(r.psTradeVolUsdc, { style: 'thousand' })} USDC
-            </Text>
-          </Box>
-        ),
-        sortable: true,
-        sortKey: r => toNumber(r.psTradeVolUsdt),
-      },
-      {
-        key: 'evVol',
-        label: '事件交易量',
+        key: 'totalVol',
+        label: '交易量合计',
         align: 'right',
         render: r => (
           <Text color="text.100" fontFamily="ISB" fontSize="14px">
-            {fmtAmount(r.eventTradeVolume, { style: 'thousand' })} USDT
+            {fmtAmount(r.totalTradeVolumeUsdt, { style: 'thousand' })} USDT
           </Text>
         ),
         sortable: true,
-        sortKey: r => toNumber(r.eventTradeVolume),
+        sortKey: r => toNumber(r.totalTradeVolumeUsdt),
       },
       {
-        key: 'ffFee',
-        label: 'FF 手续费',
+        key: 'ffFeeTotal',
+        label: 'FF 手续费合计',
         align: 'right',
         render: r => (
-          <Box>
-            <Text color="text.100" fontFamily="ISB" fontSize="14px">
-              {fmtAmount(r.flatFeeFeeUsdt)} USDT
-            </Text>
-            <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">
-              {fmtAmount(r.flatFeeFeeUsdc)} USDC
-            </Text>
-          </Box>
+          <Text color="text.100" fontFamily="ISB" fontSize="14px">
+            {fmtAmount(r.flatFeeFeeTotalUsdt)} USDT
+          </Text>
         ),
         sortable: true,
-        sortKey: r => toNumber(r.flatFeeFeeUsdt),
+        sortKey: r => toNumber(r.flatFeeFeeTotalUsdt),
       },
       {
         key: 'status',
@@ -298,23 +274,39 @@ export default function RevenueCenter() {
         align: 'right',
         render: r => (
           <Text fontFamily="ISB" color="text.100" fontSize="14px">
-            {r.tradeVolume !== null ? fmtAmount(r.tradeVolume, { style: 'thousand' }) : '—'}
+            {fmtAmount(r.tradeVolumeUsdt, { style: 'thousand' })} USDT
           </Text>
         ),
+        sortable: true,
+        sortKey: r => toNumber(r.tradeVolumeUsdt),
       },
       {
         key: 'amt',
         label: '返佣金额',
         align: 'right',
-        render: r => (
-          <Box>
-            <Text color="theme" fontFamily="ISB" fontSize="14px">
-              {fmtAmount(r.commissionAmount)} {r.settlementCoin}
-            </Text>
-          </Box>
-        ),
+        // Q2：commissionUsdt / commissionUsdc 双字段；行内双行显示非零币种（均为 0 时显示 0 USDT）
+        render: r => {
+          const u = toNumber(r.commissionUsdt)
+          const c = toNumber(r.commissionUsdc)
+          const showBoth = u !== 0 && c !== 0
+          const showUsdc = !showBoth && c !== 0
+          return (
+            <Box>
+              {(showBoth || !showUsdc) && (
+                <Text color="theme" fontFamily="ISB" fontSize="14px">
+                  {fmtAmount(u)} USDT
+                </Text>
+              )}
+              {(showBoth || showUsdc) && (
+                <Text color="theme" fontFamily="ISB" fontSize="14px" mt={showBoth ? '4px' : '0'}>
+                  {fmtAmount(c)} USDC
+                </Text>
+              )}
+            </Box>
+          )
+        },
         sortable: true,
-        sortKey: r => toNumber(r.commissionAmount),
+        sortKey: r => toNumber(r.commissionUsdt) + toNumber(r.commissionUsdc),
       },
       {
         key: 'status',
@@ -422,6 +414,11 @@ export default function RevenueCenter() {
         </Box>
       )}
 
+      {/*
+        Q6：顶部 KPI = 三列 KPI（双币种分列 + 后端合计折算 USDT 等价）。
+        - USDT / USDC：前端按 records 聚合（已到账），仍保持分币种不合并
+        - 累计返佣 (USDT 等价)：来自 dailyQ.summary.totalRebateUsdtEquiv（后端 Q5 全局口径）
+      */}
       <Flex align="center" gap="48px" mb="32px" flexWrap="wrap">
         <Box flexShrink={0}>
           <Text
@@ -462,9 +459,25 @@ export default function RevenueCenter() {
                 USDC
               </Text>
             </Box>
+            <Box>
+              <Text
+                fontSize="36px"
+                fontFamily="ISB"
+                color="text.100"
+                lineHeight="1"
+                opacity={dailySummary ? 1 : 0.4}
+              >
+                {dailySummary
+                  ? fmtAmount(dailySummary.totalRebateUsdtEquiv, { style: 'thousand' })
+                  : '—'}
+              </Text>
+              <Text fontSize="12px" color="gray.100" mt="4px">
+                合计（USDT 等价）
+              </Text>
+            </Box>
           </Flex>
           <Text fontSize="12px" color="gray.100" mt="8px">
-            返佣实时到账，双币种不合并
+            返佣实时到账，双币种不合并；合计列由后端统一折算。
           </Text>
         </Box>
         <Box flex={1}>
@@ -483,7 +496,7 @@ export default function RevenueCenter() {
 
         <Tabs.Content value="0">
           <DataTable
-            data={daily}
+            data={filteredDaily}
             columns={dailyColumns}
             getRowKey={r => r.date}
             isLoading={dailyQ.isLoading}

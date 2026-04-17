@@ -9,206 +9,401 @@ import {
 import { useQueryClient } from '@tanstack/react-query'
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AuthContext } from './context'
+import { emitAuthToast } from './authEvents'
+import { decodeBusinessJwt } from './jwt'
 import { loginToBackend, LoginError, ERRNO_WHITELIST_FORBIDDEN } from './loginApi'
-import { privyConfig, DEFAULT_PRIVY_APP_ID } from './privyConfig'
-import { clearStoredToken, readStoredToken, writeStoredToken } from './storage'
+import { privyConfig, resolvePrivyAppId } from './privyConfig'
+import { useAuthStorage } from './useAuthStorage'
+import { useAuthUnauthorizedListener } from './useAuthEvents'
 import type { AuthProvider as AuthProviderIface, AuthUser } from './types'
-import { setAccessTokenGetter } from '@/api/client'
+import { setAccessTokenGetter, type ApiUnauthorizedDetail } from '@/api/client'
+import { sanitizeBackendMsg } from '@/utils/sanitize'
 
 /**
- * Privy AuthProvider 真实实现（对应 AuthProvider 接口）。
+ * Privy AuthProvider 实现（实现 `AuthProvider` 接口）。
  *
  * 职责分层：
- * - `PrivyAuthProvider`（默认导出）—— 挂 `<PrivyProvider>` SDK + `<PrivyAuthBridge>`
- * - `PrivyAuthBridge` —— 用 Privy hooks 实现 AuthContext，做业务 JWT 换取 / 持久化 / 登出
+ * - `PrivyAuthProvider` —— 挂 `<PrivyProvider>` SDK + `<PrivyAuthBridge>`
+ * - `PrivyAuthBridge` —— 用以下三个 hook 组装 AuthContext：
+ *   - `useAuthStorage`（src/auth/useAuthStorage.ts）: 管 localStorage + cross-tab
+ *   - `useAuthUnauthorizedListener`（src/auth/useAuthEvents.ts）: 监听 `api:unauthorized`
+ *   - 本文件内的 `usePrivyExchange`: Privy token → 业务 JWT 换取 + auto-exchange
  *
- * 主要流程（见 docs/BACKEND_PENDING_INTERFACES.md §1）：
- * 1. 用户点 RequireAuth → `auth.login()` → 打开 Privy modal
- * 2. Privy 登录成功 → `useLogin.onComplete` → 拿 `accessToken + identityToken`
- * 3. 调 `/login` 换业务 JWT → 存 localStorage + state
+ * 流程（见 docs/BACKEND_PENDING_INTERFACES.md §1）：
+ * 1. RequireAuth / UI → `auth.login()` → 打开 Privy modal
+ * 2. Privy 登录成功 → `useLogin.onComplete` → exchangeJwt
+ * 3. `/login` 换取业务 JWT → persist(token + address)
  * 4. 业务 API 通过 `setAccessTokenGetter` 注入 Bearer
- * 5. 401 / errno=='104' → `api:unauthorized` → logout（清 JWT + Privy logout + query cache）
+ * 5. HTTP 401 / errno=104 → `api:unauthorized` → 被动登出 + toast
  */
 
-function mapPrivyUserToAuthUser(user: User | null, hasJwt: boolean): AuthUser | null {
-  if (!user || !hasJwt) return null
+/* ========== helpers ========== */
+
+function pickPrivyAddress(user: User | null | undefined): string | undefined {
+  if (!user) return undefined
+  if (user.wallet?.address) return user.wallet.address
+  const linked = (user as unknown as { linkedAccounts?: Array<Record<string, unknown>> })
+    .linkedAccounts
+  if (Array.isArray(linked)) {
+    for (const acc of linked) {
+      const addr = acc?.address
+      if (typeof addr === 'string' && addr.length > 0) return addr
+    }
+  }
+  return undefined
+}
+
+function mapPrivyUserToAuthUser(
+  user: User | null,
+  hasJwt: boolean,
+  businessUserId?: string,
+  cachedAddress?: string | null,
+): AuthUser | null {
+  // 有业务 JWT 就认作已登录；Privy SDK 的 `user` 对象可能在初次加载 /
+  // hot-reload / StrictMode 下稍晚 hydrate，此时只要有 JWT 里的 userId
+  // 就足以构造一个"最小 AuthUser"，避免 UI 退回到 '代理商' 兜底。
+  if (!hasJwt) return null
+  const id = businessUserId || user?.id
+  if (!id) return null
   return {
-    userId: user.id, // 占位：主站业务 uid 等 /agent/me 接入后覆盖
-    address: user.wallet?.address,
-    email: user.email?.address,
-    privyId: user.id,
+    userId: id,
+    // 地址优先级：Privy user hydrated 的实时值 > 登录时缓存的地址 > undefined
+    address: pickPrivyAddress(user) ?? cachedAddress ?? undefined,
+    email: user?.email?.address,
+    privyId: user?.id,
   }
 }
 
-function PrivyAuthBridge({ children }: { children: ReactNode }) {
+/**
+ * DEV-only JWT 调试日志（S1 脱敏）：
+ * - 不打印完整 `sub`（Privy DID）和 `aud`（App ID 前缀保留 8 位识别即可）
+ * - `exp` 换算成"距现在秒数"，便于判断是否即将过期
+ * - 只在 DEV 构建生效；prod 构建 Vite 会把 DEV 分支整块删掉
+ */
+function debugLogPrivyJwt(token: string, label: string): void {
+  try {
+    const parts = token.split('.')
+    if (parts.length !== 3) return
+    const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/'))) as {
+      aud?: string
+      iss?: string
+      sub?: string
+      exp?: number
+    }
+    const now = Math.floor(Date.now() / 1000)
+    console.info(`[auth/privy] ${label}`, {
+      iss: payload.iss,
+      audPrefix: payload.aud?.slice(0, 8),
+      subSuffix: payload.sub?.slice(-8),
+      expInSec: payload.exp ? payload.exp - now : undefined,
+    })
+  } catch {
+    // ignore decode errors
+  }
+}
+
+function debugLogBusinessJwt(
+  payload: ReturnType<typeof decodeBusinessJwt> | null | undefined,
+): void {
+  if (!payload) return
+  const now = Math.floor(Date.now() / 1000)
+  console.info('[auth/privy] business JWT', {
+    userIdSuffix: payload.userId?.slice(-4),
+    userRoleType: payload.userRoleType,
+    expInSec: payload.exp ? payload.exp - now : undefined,
+    tkValSta: payload.tkValSta,
+  })
+}
+
+/* ========== usePrivyExchange (local hook) ========== */
+
+interface UsePrivyExchangeOptions {
+  /** 当前是否已经有有效 JWT；true 时 auto-exchange 跳过 */
+  hasToken: boolean
+  /** 换取成功，写入 token + address */
+  onExchanged: (params: { token: string; address: string }) => void
+  /** 换取失败 */
+  onExchangeError: (error: Error) => void
+}
+
+/**
+ * Privy 登录入口 + /login 换取 hook。
+ *
+ * 封装 Privy SDK 的 `usePrivy/useLogin/useLogout/useIdentityToken`，对外暴露：
+ * - `login()`：打开 Privy modal（或直接触发 cached session 的登录流）
+ * - `logout()`：清 Privy 会话
+ * - `isExchanging`：/login 进行中
+ * - `isPrivyReady` / `isPrivyAuthed`：透传 SDK 状态
+ *
+ * 注意：此 hook 只能在 `<PrivyProvider>` 树内调用。
+ */
+function usePrivyExchange(options: UsePrivyExchangeOptions) {
+  const { hasToken, onExchanged, onExchangeError } = options
   const privy = usePrivy()
   const { logout: privyLogout } = useLogout()
   const { identityToken } = useIdentityToken()
-  const queryClient = useQueryClient()
 
-  // 初始值从 localStorage 读，刷新后保持登录
-  const [businessToken, setBusinessToken] = useState<string | null>(() => readStoredToken())
-  const [loginError, setLoginError] = useState<Error | null>(null)
-  const [exchanging, setExchanging] = useState(false)
+  const [isExchanging, setIsExchanging] = useState(false)
+  const [lastError, setLastError] = useState<Error | null>(null)
 
-  // 取最新的 identityToken（Privy 可能在 Provider 挂载后异步刷出来）
   const identityTokenRef = useRef<string | null>(identityToken ?? null)
   useEffect(() => {
     identityTokenRef.current = identityToken ?? null
   }, [identityToken])
 
-  /**
-   * 把 Privy token 换成业务 JWT。幂等：内部用 exchanging 锁避免重复触发。
-   */
+  // 用 ref 存回调，避免回调引用变化重建 exchangeJwt
+  const onExchangedRef = useRef(onExchanged)
+  const onExchangeErrorRef = useRef(onExchangeError)
+  useEffect(() => {
+    onExchangedRef.current = onExchanged
+    onExchangeErrorRef.current = onExchangeError
+  }, [onExchanged, onExchangeError])
+
   const exchangeJwt = useCallback(
-    async (loginMethod: string | null, loginAccount: { type?: string; address?: string } | null) => {
-      if (exchanging) return
-      setExchanging(true)
+    async (
+      loginMethod: string | null,
+      loginAccount: { type?: string; address?: string } | null,
+    ) => {
+      if (isExchanging) return
+      setIsExchanging(true)
       try {
         const accessToken = await privy.getAccessToken()
         const idToken = identityTokenRef.current
         if (!accessToken || !idToken) {
           throw new LoginError('privy_token_missing', 'Privy token 未就绪')
         }
-        // 调试：DEV 下打印将发送给后端的 JWT aud/iss/exp，便于核对 App ID 是否一致
         if (import.meta.env.DEV) {
-          const debugPayload = (tok: string, label: string) => {
-            try {
-              const part = tok.split('.')[1]
-              const json = JSON.parse(
-                atob(part.replace(/-/g, '+').replace(/_/g, '/')),
-              )
-              console.info(`[auth/privy] ${label} JWT payload:`, {
-                aud: json.aud,
-                iss: json.iss,
-                sub: json.sub,
-                exp: json.exp,
-                expectedFrontendAppId: import.meta.env.VITE_PRIVY_APP_ID,
-              })
-            } catch {
-              // ignore decode errors
-            }
-          }
-          debugPayload(accessToken, 'access_token')
-          debugPayload(idToken, 'identity_token')
+          debugLogPrivyJwt(accessToken, 'access_token')
+          debugLogPrivyJwt(idToken, 'identity_token')
         }
-        // loginAccount?.type 主站实测为 'email' / 'wallet' 等；两种 fallback 都加
         const method =
           (loginAccount?.type as 'email' | 'wallet' | undefined) ??
           (loginMethod === 'email' ? 'email' : 'wallet')
+        const address = loginAccount?.address ?? pickPrivyAddress(privy.user)
+        if (!address) {
+          throw new LoginError(
+            'privy_address_missing',
+            '无法从 Privy 账户解析钱包地址；若使用邮箱登录请检查 embeddedWallets 配置',
+          )
+        }
         const jwt = await loginToBackend({
           method,
           access_token: accessToken,
-          address: loginAccount?.address,
+          address,
           identity_token: idToken,
           referral_code: null,
         })
-        writeStoredToken(jwt)
-        setBusinessToken(jwt)
-        setLoginError(null)
+        setLastError(null)
+        onExchangedRef.current({ token: jwt, address })
       } catch (err) {
         const wrapped = err instanceof Error ? err : new Error(String(err))
-        setLoginError(wrapped)
-        // 对应主站 `10010012`（不在白名单）：直接清 Privy 会话，避免反复触发
+        setLastError(wrapped)
+        // 白名单拒绝 → 清 Privy 会话（永久失败），避免反复自动重试。
+        // 其它错误保留 Privy 会话让用户主动点"重新登录"。
         if (err instanceof LoginError && String(err.errno) === ERRNO_WHITELIST_FORBIDDEN) {
           await privyLogout().catch(() => undefined)
-        } else {
-          // 其它错误也清 Privy 会话，让用户能重试
-          await privyLogout().catch(() => undefined)
         }
-        clearStoredToken()
-        setBusinessToken(null)
+        onExchangeErrorRef.current(wrapped)
       } finally {
-        setExchanging(false)
+        setIsExchanging(false)
       }
     },
-    [privy, privyLogout, exchanging],
+    [privy, privyLogout, isExchanging],
   )
 
   useLogin({
     onComplete: async ({ loginMethod, loginAccount, wasAlreadyAuthenticated }) => {
-      // wasAlreadyAuthenticated = true 且我们已有 jwt → 跳过换取
-      if (wasAlreadyAuthenticated && readStoredToken()) return
+      // Privy cached session 恢复且我们已经有 JWT → 跳过换取
+      if (wasAlreadyAuthenticated && hasToken) return
       await exchangeJwt(loginMethod, loginAccount)
     },
     onError: err => {
-       
       console.error('[auth/privy] useLogin onError:', err)
-      setLoginError(new Error(String(err)))
+      const message = typeof err === 'string' ? err : (err as Error)?.message || 'Privy 登录出错'
+      const wrapped = new Error(message)
+      setLastError(wrapped)
+      onExchangeErrorRef.current(wrapped)
     },
   })
 
-  // 主动触发登录（RequireAuth 会调用）
-  const login = useCallback(async () => {
-    setLoginError(null)
+  // 页面刷新 / 跨 tab：Privy SDK 缓存 session 恢复 `privy.authenticated = true`
+  // 但本地 `token` 可能已过期或被清掉。onComplete 只在"新一次登录"时触发，
+  // 缓存 session 恢复**不会**触发。auto-exchange 监听这个状态差兜底。
+  // 防循环：失败后 `lastError` 被置位，effect 跳出；用户通过 RequireAuth / toast
+  // 显式重试（logout → login）才会清除 lastError。
+  const autoExchangeRef = useRef(false)
+  useEffect(() => {
+    if (!privy.ready) return
+    if (!privy.authenticated) {
+      autoExchangeRef.current = false
+      return
+    }
+    if (hasToken) return
+    if (isExchanging) return
+    if (lastError) return
+    if (autoExchangeRef.current) return
+    autoExchangeRef.current = true
+    const wallet = privy.user?.wallet
+    void exchangeJwt(
+      wallet ? 'wallet' : 'email',
+      wallet ? { type: 'wallet', address: wallet.address } : null,
+    ).finally(() => {
+      autoExchangeRef.current = false
+    })
+  }, [
+    privy.ready,
+    privy.authenticated,
+    privy.user,
+    hasToken,
+    isExchanging,
+    lastError,
+    exchangeJwt,
+  ])
+
+  const openLoginModal = useCallback(() => {
+    setLastError(null)
     privy.login()
   }, [privy])
 
-  // 登出：清业务 JWT + Privy 会话 + query 缓存
-  const logout = useCallback(async () => {
-    clearStoredToken()
-    setBusinessToken(null)
-    setLoginError(null)
+  const resetPrivySession = useCallback(async () => {
+    setLastError(null)
     await privyLogout().catch(() => undefined)
-    queryClient.clear()
-  }, [privyLogout, queryClient])
+  }, [privyLogout])
 
-  // 把 token getter 注册到 api/client
-  const getAccessToken = useCallback(async () => businessToken, [businessToken])
+  return {
+    openLoginModal,
+    resetPrivySession,
+    isExchanging,
+    isPrivyReady: privy.ready,
+    privyUser: privy.user,
+  }
+}
+
+/* ========== PrivyAuthBridge ========== */
+
+function PrivyAuthBridge({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
+  const { snapshot, persist, clear } = useAuthStorage()
+
+  // retryLogin 需要在 exchange hook 设置之前定义——但它又需要 exchange 的 logout，
+  // 所以用 ref 绕一圈 forward-declare：hook 内部先定义 callback，
+  // 在 exchange hook 初始化之后再把 ref 填好。
+  const retryRef = useRef<() => Promise<void>>(() => Promise.resolve())
+
+  const onExchanged = useCallback(
+    ({ token, address }: { token: string; address: string }) => {
+      persist({ token, address })
+    },
+    [persist],
+  )
+
+  const onExchangeError = useCallback(
+    (err: Error) => {
+      // 换取失败：清 local 快照（保持 react state ↔ storage 一致），
+      // toast 把具体错误告诉用户，附"重新登录"按钮
+      persist({ token: null, address: null })
+      emitAuthToast({
+        kind: 'error',
+        message: `登录失败：${sanitizeBackendMsg(err.message)}`,
+        action: { label: '重新登录', onClick: () => retryRef.current() },
+      })
+    },
+    [persist],
+  )
+
+  const { openLoginModal, resetPrivySession, isExchanging, isPrivyReady, privyUser } =
+    usePrivyExchange({
+      hasToken: !!snapshot.token,
+      onExchanged,
+      onExchangeError,
+    })
+
+  const login = useCallback(async () => {
+    openLoginModal()
+  }, [openLoginModal])
+
+  const logout = useCallback(async () => {
+    clear()
+    await resetPrivySession()
+    queryClient.clear()
+  }, [clear, resetPrivySession, queryClient])
+
+  // 填充 retryRef（toast action 要用）。useEffect 避免渲染时直接赋值。
+  useEffect(() => {
+    retryRef.current = async () => {
+      await logout()
+      void login()
+    }
+  }, [login, logout])
+
+  // 被动失效：业务 API 带着 Bearer 依然拿到 401 / errno=104
+  const handlePassiveUnauthorized = useCallback(
+    (detail: ApiUnauthorizedDetail) => {
+      clear()
+      queryClient.clear()
+      // kind 当前仅 http_401 / token_invalid 两种，都按"会话失效"处理。
+      // 未来后端加 account_frozen 之类时，这里按 kind 分支（比如跳 /not-agent）。
+      const parts: string[] = [
+        detail.kind === 'token_invalid' ? '登录已失效（token 无效）。' : '登录已失效（HTTP 401）。',
+      ]
+      if (detail.path) parts.push(`接口：${detail.path}`)
+      if (detail.errno !== undefined) parts.push(`errno=${detail.errno}`)
+      if (detail.msg) parts.push(`msg=${sanitizeBackendMsg(detail.msg)}`)
+      emitAuthToast({
+        kind: 'error',
+        message: parts.join(' '),
+        action: { label: '重新登录', onClick: () => retryRef.current() },
+        autoDismissMs: 0, // 不自动消失，等待用户处理
+      })
+    },
+    [clear, queryClient],
+  )
+  useAuthUnauthorizedListener(handlePassiveUnauthorized)
+
+  // 业务 JWT → AuthUser
+  const businessUserId = useMemo(() => {
+    const payload = decodeBusinessJwt(snapshot.token)
+    if (import.meta.env.DEV && snapshot.token) {
+      debugLogBusinessJwt(payload)
+    }
+    return payload?.userId
+  }, [snapshot.token])
+
+  const user = useMemo(
+    () =>
+      mapPrivyUserToAuthUser(privyUser, !!snapshot.token, businessUserId, snapshot.address),
+    [privyUser, snapshot.token, snapshot.address, businessUserId],
+  )
+
+  // Bearer 注入：注册 token getter 到 apiFetch
+  const getAccessToken = useCallback(async () => snapshot.token, [snapshot.token])
   useEffect(() => {
     setAccessTokenGetter(getAccessToken)
     return () => setAccessTokenGetter(null)
   }, [getAccessToken])
 
-  // 订阅 401/errno=104 事件 → logout
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const onUnauthorized = () => {
-      void logout()
-    }
-    window.addEventListener('api:unauthorized', onUnauthorized)
-    return () => window.removeEventListener('api:unauthorized', onUnauthorized)
-  }, [logout])
-
-  // 跨 tab 同步：某一 tab 登出后清其它 tab 的本地 state
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const onStorage = (e: StorageEvent) => {
-      if (e.key && e.key.includes('tf.agent.token')) {
-        setBusinessToken(readStoredToken())
-      }
-    }
-    window.addEventListener('storage', onStorage)
-    return () => window.removeEventListener('storage', onStorage)
-  }, [])
-
-  const user = useMemo(
-    () => mapPrivyUserToAuthUser(privy.user, !!businessToken),
-    [privy.user, businessToken],
-  )
-
-  const value: AuthProviderIface & { loginError: Error | null } = useMemo(
+  const value: AuthProviderIface = useMemo(
     () => ({
-      isAuthenticated: !!businessToken,
-      // Privy SDK 未就绪或正在换取 JWT 都视为 loading
-      isLoading: !privy.ready || exchanging,
+      isAuthenticated: !!snapshot.token,
+      isLoading: !isPrivyReady || isExchanging,
       user,
       login,
       logout,
       getAccessToken,
-      loginError,
     }),
-    [businessToken, privy.ready, exchanging, user, login, logout, getAccessToken, loginError],
+    [snapshot.token, isPrivyReady, isExchanging, user, login, logout, getAccessToken],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 
+/* ========== PrivyAuthProvider ========== */
+
 /**
- * Privy 真实 AuthProvider。接入后 main.tsx 用它替换 StubAuthProvider。
+ * Privy 真实 AuthProvider（唯一 AuthProvider 实现，在 main.tsx 挂根）。
  */
 export function PrivyAuthProvider({ children }: { children: ReactNode }) {
-  const appId = import.meta.env.VITE_PRIVY_APP_ID || DEFAULT_PRIVY_APP_ID
+  const appId = resolvePrivyAppId()
   return (
     <PrivyProvider appId={appId} config={privyConfig}>
       <PrivyAuthBridge>{children}</PrivyAuthBridge>

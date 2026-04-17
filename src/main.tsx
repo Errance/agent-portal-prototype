@@ -4,6 +4,7 @@ import { HashRouter, BrowserRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Provider as ChakraProvider } from './components/ui/provider'
 import { PrivyAuthProvider } from './auth'
+import AuthToast from './auth/AuthToast'
 import App from './App'
 
 /**
@@ -49,6 +50,9 @@ createRoot(document.getElementById('root')!).render(
       <PrivyAuthProvider>
         <Router {...routerProps}>
           <ChakraProvider forcedTheme="light">
+            {/* AuthToast 放在 ChakraProvider 内、App 外：需要 Chakra 的 theme，
+                但 DOM 上浮在最顶层（position: fixed + 高 z-index）。 */}
+            <AuthToast />
             <App />
           </ChakraProvider>
         </Router>

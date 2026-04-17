@@ -1,30 +1,23 @@
 import { useQuery } from '@tanstack/react-query'
-import { mockOrFetch } from '../config'
-import { apiFetch } from '../client'
 import type { Invitee, SubAgent } from '@/types/domain'
 
-/** GET /agent/friends/invitees */
+/**
+ * 好友中心接口后端暂未提供（见 docs/BACKEND_PENDING_INTERFACES.md §1）。
+ * 继续走 mock。
+ */
+
 export function useInvitees() {
   return useQuery<Invitee[]>({
     queryKey: ['friends', 'invitees'],
-    queryFn: () =>
-      mockOrFetch(
-        async () => (await import('@/mock/data')).invitees,
-        () => apiFetch<Invitee[]>('/agent/friends/invitees'),
-      ),
+    queryFn: async () => (await import('@/mock/data')).invitees,
     staleTime: 30_000,
   })
 }
 
-/** GET /agent/friends/sub-agents */
 export function useSubAgents() {
   return useQuery<SubAgent[]>({
     queryKey: ['friends', 'subAgents'],
-    queryFn: () =>
-      mockOrFetch(
-        async () => (await import('@/mock/data')).subAgents,
-        () => apiFetch<SubAgent[]>('/agent/friends/sub-agents'),
-      ),
+    queryFn: async () => (await import('@/mock/data')).subAgents,
     staleTime: 30_000,
   })
 }

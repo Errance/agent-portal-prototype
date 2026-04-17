@@ -1,18 +1,18 @@
 /**
- * 认证抽象层类型定义（Privy 接入前铺路）。
+ * 认证抽象层类型定义。
  *
- * 当前只有 StubAuthProvider 一个实现；Privy 接入时新增 `src/auth/privy.tsx`
- * 实现相同的 AuthProvider 接口，`main.tsx` 换 Provider 即可，业务层零感知。
+ * 目前由 `PrivyAuthProvider`（src/auth/privy.tsx）实现；业务组件只 consume
+ * `useAuth()`，不依赖 Privy SDK 本身。更换认证方案时只要保持此接口。
  */
 
 export interface AuthUser {
-  /** 主站业务 uid（后端 /login 返回） */
+  /** 主站业务 uid（后端 /login 返回的业务 JWT 里的 `userId`） */
   userId: string
-  /** 钱包地址（Privy wallet 登录时必有） */
+  /** 钱包地址（Privy wallet 登录时必有；email 登录时取 embedded Solana 钱包） */
   address?: string
   /** 邮箱（Privy email 登录时有） */
   email?: string
-  /** Privy 内部用户 id；Privy 模式下存在，stub 模式下为 undefined */
+  /** Privy DID；Privy 模式下存在 */
   privyId?: string
 }
 

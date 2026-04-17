@@ -1,20 +1,15 @@
 import { Box, Flex, Text } from '@chakra-ui/react'
 import { useAgent } from '@/context/AgentContext'
-import { useAuth } from '@/auth'
+import { useAuth, getAuthDisplayName } from '@/auth'
 import PillButton from '@/components/shared/PillButton'
 import { ChakraAnchor } from '@/components/shared/styled'
-import { maskAddress, maskEmail } from '@/utils/mask'
 
 export default function NotAgent() {
   const { setStatus } = useAgent()
   const auth = useAuth()
 
-  // 展示当前登录标识：优先 email，再 address
-  const loginLabel = auth.user?.email
-    ? maskEmail(auth.user.email)
-    : auth.user?.address
-      ? maskAddress(auth.user.address)
-      : ''
+  // 统一 displayName；用户未登录时 helper 返回 '代理商'，此页面不展示该兜底
+  const loginLabel = auth.user ? getAuthDisplayName(auth.user) : ''
 
   return (
     <Flex minH="100vh" bg="bg.100" align="center" justify="center">

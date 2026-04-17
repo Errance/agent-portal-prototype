@@ -1,15 +1,20 @@
 import { Box, Flex, Text, HStack, Grid } from '@chakra-ui/react'
+import { useState } from 'react'
 import StatCard from '@/components/shared/StatCard'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import PillButton from '@/components/shared/PillButton'
 import { ChakraLink } from '@/components/shared/styled'
 import { useAgent } from '@/context/AgentContext'
-import { useAuth } from '@/auth'
+import { useAuth, getAuthDisplayName, getAuthCopyableIdentity } from '@/auth'
+import { emitAuthToast } from '@/auth/authEvents'
 import { useDashboardKpi, useInviteCodeSummary } from '@/api/queries/dashboard'
 import { toError } from '@/api/client'
-import { maskAddress, maskEmail } from '@/utils/mask'
+import { copyFailureMessage, copyText } from '@/utils/clipboard'
 import type { InviteCodeSummary, AgentLevel } from '@/types/domain'
 
+// 代理等级徽章的配色表。等 `/agent/me` 接入后在 header 处恢复徽章渲染会重新用到。
+// 在徽章隐藏期间 eslint 会标记为 unused：下面这条 disable 只影响这两个常量。
+/* eslint-disable @typescript-eslint/no-unused-vars */
 const LEVEL_CONFIG: Record<
   AgentLevel,
   { name: string; bg: string; color: string; border: string; glow: string }
@@ -46,6 +51,7 @@ const LEVEL_CONFIG: Record<
 }
 
 const LEVEL_FALLBACK = LEVEL_CONFIG[1]
+/* eslint-enable @typescript-eslint/no-unused-vars */
 
 const columns: Column<InviteCodeSummary>[] = [
   {
@@ -108,41 +114,62 @@ const columns: Column<InviteCodeSummary>[] = [
 ]
 
 export default function Dashboard() {
-  const { isNewAgent, setIsNewAgent, agentName, agentLevel } = useAgent()
+  const { isNewAgent, setIsNewAgent } = useAgent()
   const auth = useAuth()
-  const levelStyle = LEVEL_CONFIG[agentLevel] ?? LEVEL_FALLBACK
 
-  // 占位显示：优先 Privy 登录身份（邮箱 mask > 地址 mask），fallback 到 mock agentName。
-  // /agent/profile 真实接入后把这段换成后端返回的真实 agentName。
-  const displayName = auth.user?.email
-    ? maskEmail(auth.user.email)
-    : auth.user?.address
-      ? maskAddress(auth.user.address)
-      : agentName
+  // 统一走 auth 层的 displayName helper（email > address > userId > 代理商）。
+  // `/agent/me` 接入后如果要显示后端返回的 `agent_name`，在 helper 里加一层即可。
+  const displayName = getAuthDisplayName(auth.user)
+  // 可复制身份：只有真的是邮箱 / 地址才展示复制按钮；userId 兜底情况下不展示
+  const copyable = getAuthCopyableIdentity(auth.user)
+  const [copied, setCopied] = useState(false)
+  const handleCopyIdentity = async () => {
+    if (!copyable) return
+    const res = await copyText(copyable.value)
+    if (res.ok) {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+      return
+    }
+    emitAuthToast({ kind: 'error', message: copyFailureMessage(res.reason) })
+  }
 
   const kpiQ = useDashboardKpi()
   const summaryQ = useInviteCodeSummary()
 
   return (
     <Box>
-      <Flex align="center" gap="16px" mb="32px">
+      <Flex align="center" gap="12px" mb="32px">
         <Text fontSize="28px" fontFamily="ISB" color="text.100" letterSpacing="-0.5px">
           您好，{displayName}
         </Text>
-        <Flex
-          align="center"
-          px="12px"
-          py="4px"
-          bg={levelStyle.bg}
-          border="1px solid"
-          borderColor={levelStyle.border}
-          borderRadius="full"
-          boxShadow={levelStyle.glow}
-        >
-          <Text fontSize="13px" fontFamily="ISB" color={levelStyle.color} lineHeight="1">
-            Lv.{agentLevel} {levelStyle.name}
-          </Text>
-        </Flex>
+        {copyable && (
+          <Box
+            as="button"
+            fontSize="11px"
+            color={copied ? 'theme' : 'gray.200'}
+            border="1px solid"
+            borderColor={copied ? 'theme' : 'border.100'}
+            borderRadius="4px"
+            px="8px"
+            py="2px"
+            bg="transparent"
+            cursor="pointer"
+            aria-label={`复制${copyable.label}`}
+            title={copyable.value}
+            onClick={handleCopyIdentity}
+            _hover={{ color: 'theme', borderColor: 'theme' }}
+            transition="all 0.15s"
+          >
+            {copied ? '已复制 ✓' : `复制${copyable.label}`}
+          </Box>
+        )}
+        {/*
+          代理等级徽章：等级 / 黄金 / 钻石 等是由后端 `/agent/me` 里的 `agent_level`
+          派生的（见 docs/BACKEND_PENDING_INTERFACES.md §2）。/agent/me 未接入前
+          徽章全部走 mock，对真实用户误导性太强，这里先隐藏。接入后去掉这条注释、
+          把 `LEVEL_CONFIG` / `LEVEL_FALLBACK` / 徽章 JSX 还原即可，逻辑不变。
+        */}
       </Flex>
 
       <Text

@@ -25,7 +25,7 @@ export default function InvitePromotion() {
   // 本地可变副本：支持新建 / 作废 / 编辑。接入后端后改为 mutation。
   const [codes, setCodes] = useState<InviteCode[]>([])
   useEffect(() => {
-    if (codesQ.data) setCodes(codesQ.data)
+    if (codesQ.data) setCodes(codesQ.data.rows)
   }, [codesQ.data])
 
   const [showCreate, setShowCreate] = useState(false)
@@ -67,23 +67,18 @@ export default function InvitePromotion() {
     }
     setErrors({})
     const nextSuffix = 2000 + codes.length
+    // InviteCode 模型：my_* 比例由 /agent/profile 统一提供，InviteCode 不再存；
+    // tradeDau/tradeVolume/commission 后端暂未返回（Q4），新建时保持 undefined。
     const newCode: InviteCode = {
       code: `TF${String(nextSuffix)}`,
       status: 'active',
-      myFlatFeeRate: currentFlatFeeRate,
       subFlatFeeRate: r.values.flatFee,
-      myProfitShareRate: currentProfitShareRate,
       subProfitShareRate: r.values.profitShare,
-      myEventRate: currentEventRate,
       subEventRate: r.values.event,
       registrations: 0,
       firstDepositCount: 0,
       firstTradeCount: 0,
-      tradeDau: 0,
-      tradeVolume: 0,
-      commission: 0,
       linkUrl: `https://app.turboflow.io/r/TF${String(nextSuffix)}`,
-      // H9：显式 Asia/Shanghai 而不是 dayjs 默认的浏览器 local
       createdAt: nowShanghai(),
       remark: cRemark,
     }
@@ -161,33 +156,46 @@ export default function InvitePromotion() {
     if (!stats) return []
     return [
       { label: '注册', value: stats.registrations, unit: '人' },
-      { label: '充值', value: fmtAmount(stats.depositAmount), unit: 'USDT' },
+      { label: '充值', value: fmtAmount(stats.depositUsdt), unit: 'USDT' },
       { label: '交易额', value: fmtAmount(stats.tradeVolume), unit: 'USDT' },
       { label: '佣金', value: fmtAmount(stats.commission), unit: 'USDT' },
-      { label: 'DAU', value: stats.tradeDau, unit: '人' },
+      { label: 'DAU', value: stats.dau, unit: '人' },
     ]
   }, [statsQ.data])
 
   const filteredStatsData = useMemo(() => {
-    // 审计 C2：toNumber 防御后端字符串返回
+    // Q4：tradeDau / tradeVolume / commission 后端暂未在行级返回；当筛选集中
+    // 所有行都缺失对应字段时显示 "—"，否则累加（toNumber 把 undefined 当 0）。
     let regs = 0,
       deps = 0,
       vol = 0,
       comm = 0,
       dau = 0
+    let hasVol = false,
+      hasComm = false,
+      hasDau = false
     for (const c of filtered) {
       regs += toNumber(c.registrations)
       deps += toNumber(c.firstDepositCount)
-      vol += toNumber(c.tradeVolume)
-      comm += toNumber(c.commission)
-      dau += toNumber(c.tradeDau)
+      if (c.tradeVolume !== undefined) {
+        vol += toNumber(c.tradeVolume)
+        hasVol = true
+      }
+      if (c.commission !== undefined) {
+        comm += toNumber(c.commission)
+        hasComm = true
+      }
+      if (c.tradeDau !== undefined) {
+        dau += toNumber(c.tradeDau)
+        hasDau = true
+      }
     }
     return [
       { label: '注册', value: regs, unit: '人' },
       { label: '充值', value: deps, unit: '人' },
-      { label: '交易额', value: fmtAmount(vol), unit: 'USDT' },
-      { label: '佣金', value: fmtAmount(comm), unit: 'USDT' },
-      { label: 'DAU', value: dau, unit: '人' },
+      { label: '交易额', value: hasVol ? fmtAmount(vol) : '—', unit: 'USDT' },
+      { label: '佣金', value: hasComm ? fmtAmount(comm) : '—', unit: 'USDT' },
+      { label: 'DAU', value: hasDau ? dau : '—', unit: '人' },
     ]
   }, [filtered])
 
