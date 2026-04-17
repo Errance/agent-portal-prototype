@@ -46,15 +46,14 @@ export const privyConfig: PrivyClientConfig = {
 }
 
 /**
- * sit 默认 Privy App ID（agent-portal 对接的 App，与后端 `/login` aud 校验对齐）。
+ * sit 默认 Privy App ID。
  *
- * 环境对照：
- *   sit  = cmbir1ip600bejx0mu6b42iek
- *   uat  = cmdsozhfd004mlb0b47ukqv7s
- *   prod = cmcjy9lbg0028l70m9owhg0oa
+ * 后端 `surfv2-sit-api.nfexinsider.com` 的 /login aud 校验对齐的是 surf-one
+ * sit App；之前卡在开发模式 user limit 已满，后端已调高上限。
  *
- * 历史尝试（均因 aud 不匹配 / 开发模式满员失败）：
- *   cm3zc6y73001tjxd1ui968tg7   - surf-one 业务 sit，用户额度已满
- *   cmb61g21n0087kz0mk7wo5b74   - LP Dashboard sit，后端未部署对齐
+ * 历史尝试：
+ *   cm3zc6y73001tjxd1ui968tg7   - surf-one sit（当前采用，后端 aud 对齐）
+ *   cmb61g21n0087kz0mk7wo5b74   - LP Dashboard sit，后端未对齐
+ *   cmbir1ip600bejx0mu6b42iek   - turboflow 主站 sit，后端未对齐
  */
-export const DEFAULT_PRIVY_APP_ID = 'cmbir1ip600bejx0mu6b42iek'
+export const DEFAULT_PRIVY_APP_ID = 'cm3zc6y73001tjxd1ui968tg7'
