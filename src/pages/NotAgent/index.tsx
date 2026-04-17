@@ -22,12 +22,14 @@ export default function NotAgent() {
         >
           联系平台
         </Box>
-        <Box mt="16px">
-          <Text as="button" fontSize="12px" color="gray.100" cursor="pointer"
-            onClick={() => setStatus('normal')} _hover={{ color: 'theme' }}>
-            [Demo] 切换为代理商
-          </Text>
-        </Box>
+        {import.meta.env.DEV && (
+          <Box mt="16px">
+            <Text as="button" fontSize="12px" color="gray.100" cursor="pointer"
+              onClick={() => setStatus('normal')} _hover={{ color: 'theme' }}>
+              [Demo] 切换为代理商
+            </Text>
+          </Box>
+        )}
       </Box>
     </Flex>
   )

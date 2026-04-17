@@ -12,7 +12,8 @@ interface Props extends Omit<BoxProps, 'title'> {
 
 /**
  * 居中弹窗外壳，抽离各页面重复的 fixed/backdrop/stopPropagation 模板。
- * ESC 关闭 + body 滚动锁由宿主处理（防止 iframe 嵌入场景冲突）。
+ * 内置 Escape 关闭 + backdrop 点击关闭，宿主只需传 open/onClose。
+ * 注意：当前未做焦点陷阱 / role="dialog" / aria-modal，a11y 待后续完善。
  */
 export default function ModalShell({
   open, onClose, width = '480px', children,

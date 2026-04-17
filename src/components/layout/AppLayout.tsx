@@ -1,9 +1,13 @@
 import { Box, Flex, Text } from '@chakra-ui/react'
+import { lazy, Suspense } from 'react'
 import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import FrozenBanner from './FrozenBanner'
 import GlobalFooter from './GlobalFooter'
-import DemoControls from './DemoControls'
 import { useAgent } from '@/context/AgentContext'
+
+const DemoControls = import.meta.env.DEV
+  ? lazy(() => import('./DemoControls'))
+  : null
 
 const tabs = [
   { label: '首页', path: '/' },
@@ -94,7 +98,11 @@ export default function AppLayout() {
         <Outlet />
         <GlobalFooter />
       </Box>
-      <DemoControls />
+      {DemoControls && (
+        <Suspense fallback={null}>
+          <DemoControls />
+        </Suspense>
+      )}
     </Flex>
   )
 }
