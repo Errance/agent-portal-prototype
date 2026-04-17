@@ -54,7 +54,8 @@ export async function loginToBackend(payload: LoginPayload): Promise<string> {
 
   const res = await fetch(`${API_BASE}/login`, {
     method: 'POST',
-    credentials: 'include',
+    // 不带 cookie：主站 axios 默认不带，业务认证全走 Authorization 头。
+    credentials: 'omit',
     headers: {
       'Content-Type': 'application/json',
       'biz-pf': BIZ_PF,

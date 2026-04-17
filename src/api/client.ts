@@ -106,7 +106,10 @@ export async function apiFetch<T = unknown>(path: string, opts: RequestOptions =
 
   const res = await fetch(url, {
     method,
-    credentials: 'include',
+    // 不带 cookie 凭证：认证走 Authorization: Bearer <JWT>，
+    // 与主站 web/ 的 axios 默认行为一致。若后端未在 CORS 响应里
+    // 设置 Access-Control-Allow-Credentials: true，也能直接跨域。
+    credentials: 'omit',
     ...rest,
     headers: {
       'Content-Type': 'application/json',
