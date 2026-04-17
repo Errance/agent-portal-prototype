@@ -7,12 +7,7 @@ interface Props {
 
 export default function TableSkeleton({ rows = 6, cols = 5 }: Props) {
   return (
-    <Box
-      borderTop="1px solid"
-      borderBottom="1px solid"
-      borderColor="border.100"
-      overflow="hidden"
-    >
+    <Box borderTop="1px solid" borderBottom="1px solid" borderColor="border.100" overflow="hidden">
       {Array.from({ length: rows }).map((_, r) => (
         <Flex
           key={r}
@@ -30,7 +25,8 @@ export default function TableSkeleton({ rows = 6, cols = 5 }: Props) {
               h="14px"
               borderRadius="3px"
               css={{
-                background: 'linear-gradient(90deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 100%)',
+                background:
+                  'linear-gradient(90deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.08) 50%, rgba(0,0,0,0.04) 100%)',
                 backgroundSize: '200% 100%',
                 animation: 'shimmer 1.4s infinite',
                 '@keyframes shimmer': {

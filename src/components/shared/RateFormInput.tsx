@@ -30,7 +30,13 @@ export default function RateFormInput({ label, value, onChange, step, error, ext
         letterSpacing="0.5px"
         cursor="pointer"
       >
-        {label}{extra && <Text as="span" color="gray.200"> {extra}</Text>}
+        {label}
+        {extra && (
+          <Text as="span" color="gray.200">
+            {' '}
+            {extra}
+          </Text>
+        )}
       </ChakraLabel>
       <ChakraInput
         id={inputId}
@@ -49,14 +55,18 @@ export default function RateFormInput({ label, value, onChange, step, error, ext
         type="number"
         step={step}
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={e => onChange(e.target.value)}
         transition="all 0.2s"
         _focus={{
           borderColor: error ? 'red.100' : 'theme',
           boxShadow: error ? 'none' : '0 0 0 1px rgba(10,186,181,0.5)',
         }}
       />
-      {error && <Text id={errorId} fontSize="12px" color="red.100" mt="4px">{error}</Text>}
+      {error && (
+        <Text id={errorId} fontSize="12px" color="red.100" mt="4px">
+          {error}
+        </Text>
+      )}
     </Box>
   )
 }

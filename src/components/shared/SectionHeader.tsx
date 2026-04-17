@@ -15,7 +15,9 @@ export default function SectionHeader({ title, subtitle, action, ...rest }: Prop
           {title}
         </Text>
         {subtitle && (
-          <Text fontSize="13px" color="gray.200">{subtitle}</Text>
+          <Text fontSize="13px" color="gray.200">
+            {subtitle}
+          </Text>
         )}
       </Flex>
       {action}

@@ -18,8 +18,7 @@ describe('maskUid', () => {
 
 describe('maskAddress', () => {
   it('masks long hex address', () => {
-    expect(maskAddress('0x1234567890abcdef1234567890abcdef12345678'))
-      .toBe('0x1234...5678')
+    expect(maskAddress('0x1234567890abcdef1234567890abcdef12345678')).toBe('0x1234...5678')
   })
   it('returns as-is when short', () => {
     expect(maskAddress('0x1234')).toBe('0x1234')
@@ -50,7 +49,9 @@ describe('truncateText', () => {
     expect(truncateText('短文本')).toBe('短文本')
   })
   it('truncates long text with ellipsis', () => {
-    expect(truncateText('这是一段非常长的备注内容需要被截断处理掉后面的', 10)).toBe('这是一段非常长的备注…')
+    expect(truncateText('这是一段非常长的备注内容需要被截断处理掉后面的', 10)).toBe(
+      '这是一段非常长的备注…',
+    )
   })
   it('handles null', () => {
     expect(truncateText(null)).toBe('—')

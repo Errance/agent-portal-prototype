@@ -30,7 +30,9 @@ export default function InlineStatsBar({ title, stats }: InlineStatsBarProps) {
       <Flex align="center" gap="0" flexWrap="wrap" rowGap="12px">
         {title && (
           <Box
-            px="10px" py="4px" mr="24px"
+            px="10px"
+            py="4px"
+            mr="24px"
             bg="rgba(10,186,181,0.1)"
             border="1px solid"
             borderColor="rgba(10,186,181,0.3)"
@@ -47,15 +49,26 @@ export default function InlineStatsBar({ title, stats }: InlineStatsBarProps) {
         )}
         {stats.map((s, i) => (
           <Flex key={s.label} align="center">
-            {i > 0 && (
-              <Box w="1px" h="24px" bg="border.100" mx="24px" flexShrink={0} />
-            )}
+            {i > 0 && <Box w="1px" h="24px" bg="border.100" mx="24px" flexShrink={0} />}
             <Flex align="baseline" gap="8px" flexShrink={0}>
-              <Text fontSize="13px" color="gray.100" whiteSpace="nowrap">{s.label}</Text>
-              <Text fontSize="18px" fontWeight="500" fontFamily="ISB" color="text.100" whiteSpace="nowrap" letterSpacing="-0.5px">
+              <Text fontSize="13px" color="gray.100" whiteSpace="nowrap">
+                {s.label}
+              </Text>
+              <Text
+                fontSize="18px"
+                fontWeight="500"
+                fontFamily="ISB"
+                color="text.100"
+                whiteSpace="nowrap"
+                letterSpacing="-0.5px"
+              >
                 {fmt(s.value)}
               </Text>
-              {s.unit && <Text fontSize="12px" color="gray.200" whiteSpace="nowrap">{s.unit}</Text>}
+              {s.unit && (
+                <Text fontSize="12px" color="gray.200" whiteSpace="nowrap">
+                  {s.unit}
+                </Text>
+              )}
             </Flex>
           </Flex>
         ))}

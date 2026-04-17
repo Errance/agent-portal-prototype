@@ -35,11 +35,7 @@ describe('toNumber', () => {
   })
 
   it('prevents string-concatenation bugs in reduce', () => {
-    const rows = [
-      { v: '10.5' as unknown as number },
-      { v: '20' as unknown as number },
-      { v: 5 },
-    ]
+    const rows = [{ v: '10.5' as unknown as number }, { v: '20' as unknown as number }, { v: 5 }]
     const bad = rows.reduce((a, r) => a + r.v, 0 as unknown as number)
     expect(typeof bad).toBe('string')
     const good = rows.reduce((a, r) => a + toNumber(r.v), 0)

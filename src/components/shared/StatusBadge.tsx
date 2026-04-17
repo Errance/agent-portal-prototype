@@ -1,5 +1,11 @@
 import { Box } from '@chakra-ui/react'
-import type { PayoutStatus, TransferStatus, DepositStatus, TradeStatus, EventResult } from '@/types/domain'
+import type {
+  PayoutStatus,
+  TransferStatus,
+  DepositStatus,
+  TradeStatus,
+  EventResult,
+} from '@/types/domain'
 
 /**
  * 审计 M2（待收敛）：下面的 5 组色值硬编码在这里与 Dashboard/LEVEL_CONFIG 并存。
@@ -40,11 +46,21 @@ export default function StatusBadge({ type, value }: { type: BadgeType; value: s
   let info: { label: string; color: string; bg: string } | undefined
 
   switch (type) {
-    case 'payout': info = payoutMap[value as PayoutStatus]; break
-    case 'transfer': info = transferMap[value as TransferStatus]; break
-    case 'deposit': info = depositMap[value as DepositStatus]; break
-    case 'trade': info = tradeMap[value as TradeStatus]; break
-    case 'eventResult': info = eventResultMap[value as EventResult]; break
+    case 'payout':
+      info = payoutMap[value as PayoutStatus]
+      break
+    case 'transfer':
+      info = transferMap[value as TransferStatus]
+      break
+    case 'deposit':
+      info = depositMap[value as DepositStatus]
+      break
+    case 'trade':
+      info = tradeMap[value as TradeStatus]
+      break
+    case 'eventResult':
+      info = eventResultMap[value as EventResult]
+      break
   }
 
   if (!info) return <>{value}</>

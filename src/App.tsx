@@ -28,7 +28,9 @@ function PageLoader() {
         animation="spin 0.9s linear infinite"
         css={{ '@keyframes spin': { to: { transform: 'rotate(360deg)' } } }}
       />
-      <Text ml={3} fontSize="13px" color="gray.200">加载中</Text>
+      <Text ml={3} fontSize="13px" color="gray.200">
+        加载中
+      </Text>
     </Flex>
   )
 }
@@ -52,7 +54,14 @@ const routes = [
       { path: 'transfers', element: <OnchainTransfers /> },
     ],
   },
-  { path: '/not-agent', element: <RequireAuth><NotAgent /></RequireAuth> },
+  {
+    path: '/not-agent',
+    element: (
+      <RequireAuth>
+        <NotAgent />
+      </RequireAuth>
+    ),
+  },
 ]
 
 export default function App() {

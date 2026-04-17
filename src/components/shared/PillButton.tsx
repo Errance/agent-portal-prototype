@@ -19,7 +19,10 @@ interface Props extends Omit<BoxProps, 'onClick' | 'children'> {
   to?: string
 }
 
-const VARIANT_STYLE: Record<Variant, { bg: string; color: string; border?: string; hoverBg: string }> = {
+const VARIANT_STYLE: Record<
+  Variant,
+  { bg: string; color: string; border?: string; hoverBg: string }
+> = {
   primary: { bg: 'rgba(10,186,181,0.1)', color: 'theme', hoverBg: 'rgba(10,186,181,0.2)' },
   solid: { bg: 'theme', color: '#FFFFFF', hoverBg: '#089995' },
   neutral: { bg: 'bg.200', color: 'text.100', border: 'border.200', hoverBg: 'bg.300' },
@@ -39,8 +42,15 @@ const SIZE_STYLE: Record<Size, { px: string; py: string; fontSize: string }> = {
  * 传入 `to` 时渲染为 react-router Link（<a>），其它情况渲染为 <button>。
  */
 export default function PillButton({
-  variant = 'neutral', size = 'sm', shape = 'pill',
-  disabled, onClick, children, title, to, ...rest
+  variant = 'neutral',
+  size = 'sm',
+  shape = 'pill',
+  disabled,
+  onClick,
+  children,
+  title,
+  to,
+  ...rest
 }: Props) {
   const v = VARIANT_STYLE[variant]
   const s = SIZE_STYLE[size]
@@ -70,12 +80,7 @@ export default function PillButton({
     )
   }
   return (
-    <Box
-      as="button"
-      {...commonStyle}
-      onClick={disabled ? undefined : onClick}
-      {...rest}
-    >
+    <Box as="button" {...commonStyle} onClick={disabled ? undefined : onClick} {...rest}>
       {children}
     </Box>
   )

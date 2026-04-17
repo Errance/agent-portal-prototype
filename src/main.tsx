@@ -12,9 +12,10 @@ import App from './App'
  * - 设置 VITE_ROUTER=browser 切到 BrowserRouter（需要宿主支持 SPA fallback，
  *   如 nginx `try_files $uri /index.html` 或 GitHub Pages 的 404.html 重定向）。
  */
-const ROUTER_KIND = (import.meta.env.VITE_ROUTER as string | undefined) === 'browser'
-  ? 'browser' as const
-  : 'hash' as const
+const ROUTER_KIND =
+  (import.meta.env.VITE_ROUTER as string | undefined) === 'browser'
+    ? ('browser' as const)
+    : ('hash' as const)
 
 const BASENAME = import.meta.env.BASE_URL?.replace(/\/$/, '') || ''
 

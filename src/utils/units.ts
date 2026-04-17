@@ -29,9 +29,7 @@ export function fromWei(raw: Raw | string, decimals: number): Human {
 
 export function toWei(human: Human | number, decimals: number): Raw {
   if (!Number.isFinite(human as number)) return '0' as Raw
-  return new Decimal(human as number)
-    .times(new Decimal(10).pow(decimals))
-    .toFixed(0) as Raw
+  return new Decimal(human as number).times(new Decimal(10).pow(decimals)).toFixed(0) as Raw
 }
 
 export const COIN_DECIMALS: Record<string, number> = {

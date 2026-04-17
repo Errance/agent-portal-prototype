@@ -57,7 +57,9 @@ export function StubAuthProvider({ children }: { children: ReactNode }) {
   // Privy 接入后，logout 内部会进一步清 privy 会话并弹 login modal
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const onUnauthorized = () => { void logout() }
+    const onUnauthorized = () => {
+      void logout()
+    }
     window.addEventListener('api:unauthorized', onUnauthorized)
     return () => window.removeEventListener('api:unauthorized', onUnauthorized)
   }, [logout])

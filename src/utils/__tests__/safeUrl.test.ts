@@ -36,12 +36,14 @@ describe('isSafePromotionUrl', () => {
 
 describe('normalizePromotionUrl', () => {
   it('合法链接返回 URL.href 规范化形式', () => {
-    expect(normalizePromotionUrl('https://app.turboflow.io/r/TF1001'))
-      .toBe('https://app.turboflow.io/r/TF1001')
+    expect(normalizePromotionUrl('https://app.turboflow.io/r/TF1001')).toBe(
+      'https://app.turboflow.io/r/TF1001',
+    )
   })
   it('合法链接被 trim', () => {
-    expect(normalizePromotionUrl('  https://app.turboflow.io/r/TF1001  '))
-      .toBe('https://app.turboflow.io/r/TF1001')
+    expect(normalizePromotionUrl('  https://app.turboflow.io/r/TF1001  ')).toBe(
+      'https://app.turboflow.io/r/TF1001',
+    )
   })
   it('非法链接返回 null', () => {
     expect(normalizePromotionUrl('not a url')).toBeNull()

@@ -35,8 +35,16 @@ interface DataTableProps<T> {
 }
 
 export default function DataTable<T>({
-  data, columns, pageSize = 10, footer, maxH, stickyRight,
-  getRowKey, isLoading, error, emptyText,
+  data,
+  columns,
+  pageSize = 10,
+  footer,
+  maxH,
+  stickyRight,
+  getRowKey,
+  isLoading,
+  error,
+  emptyText,
 }: DataTableProps<T>) {
   const [page, setPage] = useState(1)
   const [sortKey, setSortKey] = useState<string | null>(null)
@@ -50,7 +58,8 @@ export default function DataTable<T>({
     // 审计 M6：NaN/undefined 归一化 + 二级 key (原始 index) 保证稳定排序
     const indexed = data.map((row, i) => ({ row, i }))
     indexed.sort((a, b) => {
-      const va = fn(a.row); const vb = fn(b.row)
+      const va = fn(a.row)
+      const vb = fn(b.row)
       let cmp: number
       if (typeof va === 'number' && typeof vb === 'number') {
         const na = Number.isFinite(va) ? va : -Infinity
@@ -72,7 +81,10 @@ export default function DataTable<T>({
 
   const handleSort = (key: string) => {
     if (sortKey === key) setSortAsc(!sortAsc)
-    else { setSortKey(key); setSortAsc(true) }
+    else {
+      setSortKey(key)
+      setSortAsc(true)
+    }
   }
 
   if (error) return <ErrorState message={error.message} onRetry={error.retry} />
@@ -88,54 +100,83 @@ export default function DataTable<T>({
               {columns.map((col, ci) => {
                 const isStickyRight = stickyRight && ci === columns.length - 1
                 return (
-                <Table.ColumnHeader
-                  key={col.key}
-                  bg={isStickyRight ? 'bg.200' : 'rgba(0,0,0,0.02)'}
-                  border={0}
-                  borderBottom="1px solid"
-                  borderColor="border.100"
-                  color="gray.200"
-                  fontSize="12px"
-                  fontWeight="500"
-                  textTransform="uppercase"
-                  letterSpacing="0.5px"
-                  py="12px"
-                  px="16px"
-                  whiteSpace="nowrap"
-                  minW={col.minW}
-                  w={col.width}
-                  textAlign={col.align || 'left'}
-                  cursor={col.sortable ? 'pointer' : 'default'}
-                  tabIndex={col.sortable ? 0 : undefined}
-                  role={col.sortable ? 'button' : undefined}
-                  aria-sort={
-                    col.sortable
-                      ? (sortKey === col.key ? (sortAsc ? 'ascending' : 'descending') : 'none')
-                      : undefined
-                  }
-                  onClick={() => col.sortable && handleSort(col.key)}
-                  onKeyDown={col.sortable ? (e: React.KeyboardEvent) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      handleSort(col.key)
+                  <Table.ColumnHeader
+                    key={col.key}
+                    bg={isStickyRight ? 'bg.200' : 'rgba(0,0,0,0.02)'}
+                    border={0}
+                    borderBottom="1px solid"
+                    borderColor="border.100"
+                    color="gray.200"
+                    fontSize="12px"
+                    fontWeight="500"
+                    textTransform="uppercase"
+                    letterSpacing="0.5px"
+                    py="12px"
+                    px="16px"
+                    whiteSpace="nowrap"
+                    minW={col.minW}
+                    w={col.width}
+                    textAlign={col.align || 'left'}
+                    cursor={col.sortable ? 'pointer' : 'default'}
+                    tabIndex={col.sortable ? 0 : undefined}
+                    role={col.sortable ? 'button' : undefined}
+                    aria-sort={
+                      col.sortable
+                        ? sortKey === col.key
+                          ? sortAsc
+                            ? 'ascending'
+                            : 'descending'
+                          : 'none'
+                        : undefined
                     }
-                  } : undefined}
-                  _hover={col.sortable ? { color: 'text.100', bg: 'rgba(0,0,0,0.04)' } : {}}
-                  _focusVisible={col.sortable ? { outline: '2px solid', outlineColor: 'theme', outlineOffset: '-2px' } : {}}
-                  transition="all 0.2s"
-                  {...(isStickyRight ? {
-                    position: 'sticky' as const, right: 0, zIndex: 2,
-                    boxShadow: '-8px 0 16px rgba(0,0,0,0.04)',
-                  } : {})}
-                >
-                  <Flex align="center" gap={2} justify={col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start'}>
-                    {col.label}
-                    {col.sortable && sortKey === col.key && (
-                      <Text fontSize="12px" color="theme">{sortAsc ? '↑' : '↓'}</Text>
-                    )}
-                  </Flex>
-                </Table.ColumnHeader>
-              )})}
+                    onClick={() => col.sortable && handleSort(col.key)}
+                    onKeyDown={
+                      col.sortable
+                        ? (e: React.KeyboardEvent) => {
+                            if (e.key === 'Enter' || e.key === ' ') {
+                              e.preventDefault()
+                              handleSort(col.key)
+                            }
+                          }
+                        : undefined
+                    }
+                    _hover={col.sortable ? { color: 'text.100', bg: 'rgba(0,0,0,0.04)' } : {}}
+                    _focusVisible={
+                      col.sortable
+                        ? { outline: '2px solid', outlineColor: 'theme', outlineOffset: '-2px' }
+                        : {}
+                    }
+                    transition="all 0.2s"
+                    {...(isStickyRight
+                      ? {
+                          position: 'sticky' as const,
+                          right: 0,
+                          zIndex: 2,
+                          boxShadow: '-8px 0 16px rgba(0,0,0,0.04)',
+                        }
+                      : {})}
+                  >
+                    <Flex
+                      align="center"
+                      gap={2}
+                      justify={
+                        col.align === 'right'
+                          ? 'flex-end'
+                          : col.align === 'center'
+                            ? 'center'
+                            : 'flex-start'
+                      }
+                    >
+                      {col.label}
+                      {col.sortable && sortKey === col.key && (
+                        <Text fontSize="12px" color="theme">
+                          {sortAsc ? '↑' : '↓'}
+                        </Text>
+                      )}
+                    </Flex>
+                  </Table.ColumnHeader>
+                )
+              })}
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -158,12 +199,15 @@ export default function DataTable<T>({
                     color="text.100"
                     whiteSpace="nowrap"
                     textAlign={col.align || 'left'}
-                    {...(stickyRight && ci === columns.length - 1 ? {
-                      position: 'sticky' as const, right: 0,
-                      bg: 'bg.200',
-                      boxShadow: '-8px 0 16px rgba(0,0,0,0.04)',
-                      _groupHover: { bg: 'bg.100' },
-                    } : {})}
+                    {...(stickyRight && ci === columns.length - 1
+                      ? {
+                          position: 'sticky' as const,
+                          right: 0,
+                          bg: 'bg.200',
+                          boxShadow: '-8px 0 16px rgba(0,0,0,0.04)',
+                          _groupHover: { bg: 'bg.100' },
+                        }
+                      : {})}
                   >
                     {col.render(row, ri)}
                   </Table.Cell>
@@ -174,7 +218,11 @@ export default function DataTable<T>({
         </Table.Root>
       </Box>
 
-      {footer && <Box mt={4} px={4}>{footer}</Box>}
+      {footer && (
+        <Box mt={4} px={4}>
+          {footer}
+        </Box>
+      )}
 
       {sorted.length > pageSize && (
         <Flex justify="flex-end" align="center" mt="24px" gap="16px">
@@ -182,11 +230,22 @@ export default function DataTable<T>({
             {safeP} / {totalPages}
           </Text>
           <HStack gap="8px">
-            <PageBtn label="‹" ariaLabel="上一页" disabled={safeP <= 1} onClick={() => setPage(safeP - 1)} />
-            <PageBtn label="›" ariaLabel="下一页" disabled={safeP >= totalPages} onClick={() => setPage(safeP + 1)} />
+            <PageBtn
+              label="‹"
+              ariaLabel="上一页"
+              disabled={safeP <= 1}
+              onClick={() => setPage(safeP - 1)}
+            />
+            <PageBtn
+              label="›"
+              ariaLabel="下一页"
+              disabled={safeP >= totalPages}
+              onClick={() => setPage(safeP + 1)}
+            />
           </HStack>
           <Text fontSize="13px" color="gray.200">
-            {(safeP - 1) * pageSize + 1}–{Math.min(safeP * pageSize, sorted.length)} / {sorted.length}
+            {(safeP - 1) * pageSize + 1}–{Math.min(safeP * pageSize, sorted.length)} /{' '}
+            {sorted.length}
           </Text>
         </Flex>
       )}
@@ -194,8 +253,16 @@ export default function DataTable<T>({
   )
 }
 
-function PageBtn({ label, disabled, onClick, ariaLabel }: {
-  label: string; disabled?: boolean; onClick: () => void; ariaLabel: string
+function PageBtn({
+  label,
+  disabled,
+  onClick,
+  ariaLabel,
+}: {
+  label: string
+  disabled?: boolean
+  onClick: () => void
+  ariaLabel: string
 }) {
   return (
     <Box

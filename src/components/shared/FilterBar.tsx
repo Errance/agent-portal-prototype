@@ -33,7 +33,11 @@ export function FilterItem({ label, children, required, wide }: FilterItemProps)
         letterSpacing="0.5px"
         cursor="pointer"
       >
-        {required && <Text as="span" color="red.100">* </Text>}
+        {required && (
+          <Text as="span" color="red.100">
+            *{' '}
+          </Text>
+        )}
         {label}
       </ChakraLabel>
       {child}
@@ -42,7 +46,11 @@ export function FilterItem({ label, children, required, wide }: FilterItemProps)
 }
 
 export function Select({
-  id, value, onChange, options, disabled,
+  id,
+  value,
+  onChange,
+  options,
+  disabled,
 }: {
   id?: string
   value: string
@@ -54,7 +62,7 @@ export function Select({
     <ChakraSelect
       id={id}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={e => onChange(e.target.value)}
       disabled={disabled}
       w="100%"
       h="36px"
@@ -81,7 +89,11 @@ export function Select({
 }
 
 export function Input({
-  id, value, onChange, placeholder, type = 'text',
+  id,
+  value,
+  onChange,
+  placeholder,
+  type = 'text',
 }: {
   id?: string
   value: string
@@ -94,7 +106,7 @@ export function Input({
       id={id}
       type={type}
       value={value}
-      onChange={(e) => onChange(e.target.value)}
+      onChange={e => onChange(e.target.value)}
       placeholder={placeholder}
       w="100%"
       h="36px"
@@ -113,18 +125,18 @@ export function Input({
   )
 }
 
-export function FilterBar({ children, onSearch, onReset }: {
+export function FilterBar({
+  children,
+  onSearch,
+  onReset,
+}: {
   children: ReactNode
   onSearch?: () => void
   onReset?: () => void
 }) {
   return (
     <Box mb="24px">
-      <Grid
-        templateColumns="repeat(auto-fill, minmax(180px, 1fr))"
-        gap="16px"
-        alignItems="end"
-      >
+      <Grid templateColumns="repeat(auto-fill, minmax(180px, 1fr))" gap="16px" alignItems="end">
         {children}
         <Flex gap="12px" alignSelf="end">
           {onSearch && (
@@ -177,10 +189,15 @@ export function FilterBar({ children, onSearch, onReset }: {
  * 若需要 a11y 可再拆分为两个 FilterItem。
  */
 export function DateRangeInput({
-  id, from, to, onFromChange, onToChange,
+  id,
+  from,
+  to,
+  onFromChange,
+  onToChange,
 }: {
   id?: string
-  from: string; to: string
+  from: string
+  to: string
   onFromChange: (v: string) => void
   onToChange: (v: string) => void
 }) {
@@ -189,7 +206,9 @@ export function DateRangeInput({
       <Box flex={1} minW="0">
         <Input id={id} type="date" value={from} onChange={onFromChange} />
       </Box>
-      <Text fontSize="13px" color="gray.200" flexShrink={0}>—</Text>
+      <Text fontSize="13px" color="gray.200" flexShrink={0}>
+        —
+      </Text>
       <Box flex={1} minW="0">
         <Input type="date" value={to} onChange={onToChange} />
       </Box>

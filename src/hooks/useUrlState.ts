@@ -36,11 +36,7 @@ export function useUrlState<T extends string>(
  * 读取一个只读 URL 参数并做 sanitize（例如 UID 格式校验）。
  * 非法值直接返回 fallback，避免脏数据传入 filter 或未来的 API 请求。
  */
-export function useSanitizedUrlParam(
-  key: string,
-  pattern: RegExp,
-  fallback = '',
-): string {
+export function useSanitizedUrlParam(key: string, pattern: RegExp, fallback = ''): string {
   const [params] = useSearchParams()
   return useMemo(() => {
     const raw = params.get(key)

@@ -31,11 +31,13 @@ export interface RateValues {
   event: number
 }
 
-export type RateResult =
-  | { ok: true; values: RateValues }
-  | { ok: false; errors: RateErrors }
+export type RateResult = { ok: true; values: RateValues } | { ok: false; errors: RateErrors }
 
-function validOne(raw: string, cap: number, label: string): { value: number | null; error?: string } {
+function validOne(
+  raw: string,
+  cap: number,
+  label: string,
+): { value: number | null; error?: string } {
   if (raw === '' || raw === null || raw === undefined) return { value: null, error: '请输入' }
   const n = Number(raw)
   if (!Number.isFinite(n)) return { value: null, error: '请输入有效数字' }

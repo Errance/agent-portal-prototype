@@ -31,8 +31,13 @@ interface CommissionAgg {
  * - 所有数值经 `toNumber` 归一化，防御后端字符串返回
  */
 function aggregateCommissions(list: CommissionRecord[], onlyPaid = false): CommissionAgg {
-  let totalUsdt = 0, totalUsdc = 0, volumeUsdt = 0
-  let perpUsdt = 0, perpUsdc = 0, eventUsdt = 0, eventUsdc = 0
+  let totalUsdt = 0,
+    totalUsdc = 0,
+    volumeUsdt = 0
+  let perpUsdt = 0,
+    perpUsdc = 0,
+    eventUsdt = 0,
+    eventUsdc = 0
   for (const r of list) {
     volumeUsdt += toNumber(r.tradeVolume)
     if (onlyPaid && r.payoutStatus !== 'paid') continue
@@ -63,14 +68,18 @@ export default function RevenueCenter() {
   const dailyQ = useDailyRevenue()
   const recordsQ = useCommissionRecords()
   const cfgQ = useSettlementConfig()
-  const daily = dailyQ.data ?? []
-  const records = recordsQ.data ?? []
+  const daily = useMemo(() => dailyQ.data ?? [], [dailyQ.data])
+  const records = useMemo(() => recordsQ.data ?? [], [recordsQ.data])
 
   const settlementDisabled = productLine === 'event'
   const effectiveSettlement = settlementDisabled ? 'all' : settlement
 
-  const hasFilter = productLine !== 'all' || effectiveSettlement !== 'all'
-    || dateFrom !== '' || dateTo !== '' || preSourceUid !== ''
+  const hasFilter =
+    productLine !== 'all' ||
+    effectiveSettlement !== 'all' ||
+    dateFrom !== '' ||
+    dateTo !== '' ||
+    preSourceUid !== ''
 
   const paidAgg = useMemo(() => aggregateCommissions(records, true), [records])
 
@@ -88,8 +97,12 @@ export default function RevenueCenter() {
   const filteredRecords = useMemo(() => {
     let data = records
     if (preSourceUid) data = data.filter(r => r.sourceUid === preSourceUid)
-    if (productLine !== 'all') data = data.filter(r => r.productLine === (productLine === 'perpetual' ? 'perpetual' : 'event'))
-    if (effectiveSettlement !== 'all') data = data.filter(r => r.settlementType === effectiveSettlement)
+    if (productLine !== 'all')
+      data = data.filter(
+        r => r.productLine === (productLine === 'perpetual' ? 'perpetual' : 'event'),
+      )
+    if (effectiveSettlement !== 'all')
+      data = data.filter(r => r.settlementType === effectiveSettlement)
     return data
   }, [records, productLine, effectiveSettlement, preSourceUid])
 
@@ -108,183 +121,351 @@ export default function RevenueCenter() {
    * 改为 USDT / USDC 始终分列展示，避免将两种稳定币 1:1 当作合计。
    * 若后续需要"合计"，应由后端给出预先折算好的 USDT 等值字段。
    */
-  const dailyColumns: Column<DailyRevenue>[] = useMemo(() => [
-    { key: 'date', label: '日期', render: r => <Text fontFamily="ISB" color="text.100">{r.date}</Text> },
-    {
-      key: 'ffComm', label: 'FF 返佣', align: 'right',
-      render: r => (
-        <Box>
-          <Text color="theme" fontFamily="ISB" fontSize="14px">{fmtAmount(r.flatFeeCommUsdt)} USDT</Text>
-          <Text color="theme" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.flatFeeCommUsdc)} USDC</Text>
-        </Box>
-      ),
-      sortable: true, sortKey: r => toNumber(r.flatFeeCommUsdt),
-    },
-    {
-      key: 'psComm', label: 'PS 返佣', align: 'right',
-      render: r => (
-        <Box>
-          <Text color="theme" fontFamily="ISB" fontSize="14px">{fmtAmount(r.profitShareCommUsdt)} USDT</Text>
-          <Text color="theme" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.profitShareCommUsdc)} USDC</Text>
-        </Box>
-      ),
-      sortable: true, sortKey: r => toNumber(r.profitShareCommUsdt),
-    },
-    {
-      key: 'evComm', label: '事件返佣', align: 'right',
-      render: r => (
-        <Text color="theme" fontFamily="ISB" fontSize="14px">{fmtAmount(r.eventCommission)} USDT</Text>
-      ),
-      sortable: true, sortKey: r => toNumber(r.eventCommission),
-    },
-    {
-      key: 'ffVol', label: 'FF 交易量', align: 'right',
-      render: r => (
-        <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.ffTradeVolUsdt, { style: 'thousand' })} USDT</Text>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.ffTradeVolUsdc, { style: 'thousand' })} USDC</Text>
-        </Box>
-      ),
-      sortable: true, sortKey: r => toNumber(r.ffTradeVolUsdt),
-    },
-    {
-      key: 'psVol', label: 'PS 交易量', align: 'right',
-      render: r => (
-        <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.psTradeVolUsdt, { style: 'thousand' })} USDT</Text>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.psTradeVolUsdc, { style: 'thousand' })} USDC</Text>
-        </Box>
-      ),
-      sortable: true, sortKey: r => toNumber(r.psTradeVolUsdt),
-    },
-    {
-      key: 'evVol', label: '事件交易量', align: 'right',
-      render: r => (
-        <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.eventTradeVolume, { style: 'thousand' })} USDT</Text>
-      ),
-      sortable: true, sortKey: r => toNumber(r.eventTradeVolume),
-    },
-    {
-      key: 'ffFee', label: 'FF 手续费', align: 'right',
-      render: r => (
-        <Box>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px">{fmtAmount(r.flatFeeFeeUsdt)} USDT</Text>
-          <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">{fmtAmount(r.flatFeeFeeUsdc)} USDC</Text>
-        </Box>
-      ),
-      sortable: true, sortKey: r => toNumber(r.flatFeeFeeUsdt),
-    },
-    {
-      key: 'status', label: '状态',
-      render: r => <StatusBadge type="payout" value={r.payoutStatus} />,
-    },
-  ], [])
+  const dailyColumns: Column<DailyRevenue>[] = useMemo(
+    () => [
+      {
+        key: 'date',
+        label: '日期',
+        render: r => (
+          <Text fontFamily="ISB" color="text.100">
+            {r.date}
+          </Text>
+        ),
+      },
+      {
+        key: 'ffComm',
+        label: 'FF 返佣',
+        align: 'right',
+        render: r => (
+          <Box>
+            <Text color="theme" fontFamily="ISB" fontSize="14px">
+              {fmtAmount(r.flatFeeCommUsdt)} USDT
+            </Text>
+            <Text color="theme" fontFamily="ISB" fontSize="14px" mt="4px">
+              {fmtAmount(r.flatFeeCommUsdc)} USDC
+            </Text>
+          </Box>
+        ),
+        sortable: true,
+        sortKey: r => toNumber(r.flatFeeCommUsdt),
+      },
+      {
+        key: 'psComm',
+        label: 'PS 返佣',
+        align: 'right',
+        render: r => (
+          <Box>
+            <Text color="theme" fontFamily="ISB" fontSize="14px">
+              {fmtAmount(r.profitShareCommUsdt)} USDT
+            </Text>
+            <Text color="theme" fontFamily="ISB" fontSize="14px" mt="4px">
+              {fmtAmount(r.profitShareCommUsdc)} USDC
+            </Text>
+          </Box>
+        ),
+        sortable: true,
+        sortKey: r => toNumber(r.profitShareCommUsdt),
+      },
+      {
+        key: 'evComm',
+        label: '事件返佣',
+        align: 'right',
+        render: r => (
+          <Text color="theme" fontFamily="ISB" fontSize="14px">
+            {fmtAmount(r.eventCommission)} USDT
+          </Text>
+        ),
+        sortable: true,
+        sortKey: r => toNumber(r.eventCommission),
+      },
+      {
+        key: 'ffVol',
+        label: 'FF 交易量',
+        align: 'right',
+        render: r => (
+          <Box>
+            <Text color="text.100" fontFamily="ISB" fontSize="14px">
+              {fmtAmount(r.ffTradeVolUsdt, { style: 'thousand' })} USDT
+            </Text>
+            <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">
+              {fmtAmount(r.ffTradeVolUsdc, { style: 'thousand' })} USDC
+            </Text>
+          </Box>
+        ),
+        sortable: true,
+        sortKey: r => toNumber(r.ffTradeVolUsdt),
+      },
+      {
+        key: 'psVol',
+        label: 'PS 交易量',
+        align: 'right',
+        render: r => (
+          <Box>
+            <Text color="text.100" fontFamily="ISB" fontSize="14px">
+              {fmtAmount(r.psTradeVolUsdt, { style: 'thousand' })} USDT
+            </Text>
+            <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">
+              {fmtAmount(r.psTradeVolUsdc, { style: 'thousand' })} USDC
+            </Text>
+          </Box>
+        ),
+        sortable: true,
+        sortKey: r => toNumber(r.psTradeVolUsdt),
+      },
+      {
+        key: 'evVol',
+        label: '事件交易量',
+        align: 'right',
+        render: r => (
+          <Text color="text.100" fontFamily="ISB" fontSize="14px">
+            {fmtAmount(r.eventTradeVolume, { style: 'thousand' })} USDT
+          </Text>
+        ),
+        sortable: true,
+        sortKey: r => toNumber(r.eventTradeVolume),
+      },
+      {
+        key: 'ffFee',
+        label: 'FF 手续费',
+        align: 'right',
+        render: r => (
+          <Box>
+            <Text color="text.100" fontFamily="ISB" fontSize="14px">
+              {fmtAmount(r.flatFeeFeeUsdt)} USDT
+            </Text>
+            <Text color="text.100" fontFamily="ISB" fontSize="14px" mt="4px">
+              {fmtAmount(r.flatFeeFeeUsdc)} USDC
+            </Text>
+          </Box>
+        ),
+        sortable: true,
+        sortKey: r => toNumber(r.flatFeeFeeUsdt),
+      },
+      {
+        key: 'status',
+        label: '状态',
+        render: r => <StatusBadge type="payout" value={r.payoutStatus} />,
+      },
+    ],
+    [],
+  )
 
-  const recordColumns: Column<CommissionRecord>[] = useMemo(() => [
-    {
-      key: 'user', label: '来源用户',
-      render: r => <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.sourceUid ?? ''}>
-        {r.sourceUid ? maskUid(r.sourceUid) : '—'}
-      </Text>,
-    },
-    {
-      key: 'type', label: '来源类型',
-      render: r => <Text fontSize="13px" color="text.100">{r.sourceType === 'direct' ? '直推返佣' : '平台奖励'}</Text>,
-    },
-    {
-      key: 'prod', label: '产品线',
-      render: r => <Text color="text.100" fontFamily="ISB" fontSize="14px">{r.productLine === 'perpetual' ? '永续合约' : '事件合约'}</Text>,
-    },
-    {
-      key: 'settle', label: '结算方式',
-      render: r => <Text fontSize="13px" color="text.100">{r.settlementType === 'flat_fee' ? 'Flat Fee' : r.settlementType === 'profit_share' ? 'Profit Share' : '—'}</Text>,
-    },
-    {
-      key: 'vol', label: '交易额', align: 'right',
-      render: r => (
-        <Text fontFamily="ISB" color="text.100" fontSize="14px">
-          {r.tradeVolume !== null ? fmtAmount(r.tradeVolume, { style: 'thousand' }) : '—'}
-        </Text>
-      ),
-    },
-    {
-      key: 'amt', label: '返佣金额', align: 'right',
-      render: r => (
-        <Box>
-          <Text color="theme" fontFamily="ISB" fontSize="14px">{fmtAmount(r.commissionAmount)} {r.settlementCoin}</Text>
-        </Box>
-      ),
-      sortable: true, sortKey: r => toNumber(r.commissionAmount),
-    },
-    {
-      key: 'status', label: '状态', align: 'right',
-      render: r => <StatusBadge type="payout" value={r.payoutStatus} />,
-    },
-    {
-      key: 'time', label: '时间', align: 'right',
-      render: r => <Text fontSize="13px" color="gray.200">{r.time}</Text>,
-    },
-  ], [])
+  const recordColumns: Column<CommissionRecord>[] = useMemo(
+    () => [
+      {
+        key: 'user',
+        label: '来源用户',
+        render: r => (
+          <Text color="text.100" fontFamily="ISB" fontSize="15px" title={r.sourceUid ?? ''}>
+            {r.sourceUid ? maskUid(r.sourceUid) : '—'}
+          </Text>
+        ),
+      },
+      {
+        key: 'type',
+        label: '来源类型',
+        render: r => (
+          <Text fontSize="13px" color="text.100">
+            {r.sourceType === 'direct' ? '直推返佣' : '平台奖励'}
+          </Text>
+        ),
+      },
+      {
+        key: 'prod',
+        label: '产品线',
+        render: r => (
+          <Text color="text.100" fontFamily="ISB" fontSize="14px">
+            {r.productLine === 'perpetual' ? '永续合约' : '事件合约'}
+          </Text>
+        ),
+      },
+      {
+        key: 'settle',
+        label: '结算方式',
+        render: r => (
+          <Text fontSize="13px" color="text.100">
+            {r.settlementType === 'flat_fee'
+              ? 'Flat Fee'
+              : r.settlementType === 'profit_share'
+                ? 'Profit Share'
+                : '—'}
+          </Text>
+        ),
+      },
+      {
+        key: 'vol',
+        label: '交易额',
+        align: 'right',
+        render: r => (
+          <Text fontFamily="ISB" color="text.100" fontSize="14px">
+            {r.tradeVolume !== null ? fmtAmount(r.tradeVolume, { style: 'thousand' }) : '—'}
+          </Text>
+        ),
+      },
+      {
+        key: 'amt',
+        label: '返佣金额',
+        align: 'right',
+        render: r => (
+          <Box>
+            <Text color="theme" fontFamily="ISB" fontSize="14px">
+              {fmtAmount(r.commissionAmount)} {r.settlementCoin}
+            </Text>
+          </Box>
+        ),
+        sortable: true,
+        sortKey: r => toNumber(r.commissionAmount),
+      },
+      {
+        key: 'status',
+        label: '状态',
+        align: 'right',
+        render: r => <StatusBadge type="payout" value={r.payoutStatus} />,
+      },
+      {
+        key: 'time',
+        label: '时间',
+        align: 'right',
+        render: r => (
+          <Text fontSize="13px" color="gray.200">
+            {r.time}
+          </Text>
+        ),
+      },
+    ],
+    [],
+  )
 
   const tabTrigger = (val: string, label: string) => (
-    <Tabs.Trigger value={val} px="16px" py="16px" fontSize="15px"
+    <Tabs.Trigger
+      value={val}
+      px="16px"
+      py="16px"
+      fontSize="15px"
       color={tab === val ? 'theme' : 'gray.100'}
-      fontFamily="ISB" bg="transparent" border="none"
+      fontFamily="ISB"
+      bg="transparent"
+      border="none"
       borderBottom="2px solid"
       borderColor={tab === val ? 'theme' : 'transparent'}
       _hover={{ color: tab === val ? 'theme' : 'text.100' }}
-      transition="all 0.2s">
+      transition="all 0.2s"
+    >
       {label}
     </Tabs.Trigger>
   )
 
   return (
     <Box>
-      <Text fontFamily="ISB" fontSize="24px" color="text.100" letterSpacing="-0.5px" mb="24px">收益中心</Text>
+      <Text fontFamily="ISB" fontSize="24px" color="text.100" letterSpacing="-0.5px" mb="24px">
+        收益中心
+      </Text>
 
       <FilterBar
         onSearch={() => {}}
-        onReset={() => { setProductLine('all'); setSettlement('all'); setDateFrom(''); setDateTo('') }}
+        onReset={() => {
+          setProductLine('all')
+          setSettlement('all')
+          setDateFrom('')
+          setDateTo('')
+        }}
       >
         <FilterItem label="产品线">
-          <Select value={productLine} onChange={v => { setProductLine(v); if (v === 'event') setSettlement('all') }} options={[
-            { label: '全部', value: 'all' }, { label: '永续合约', value: 'perpetual' }, { label: '事件合约', value: 'event' },
-          ]} />
+          <Select
+            value={productLine}
+            onChange={v => {
+              setProductLine(v)
+              if (v === 'event') setSettlement('all')
+            }}
+            options={[
+              { label: '全部', value: 'all' },
+              { label: '永续合约', value: 'perpetual' },
+              { label: '事件合约', value: 'event' },
+            ]}
+          />
         </FilterItem>
         <FilterItem label="结算方式">
-          <Select value={effectiveSettlement} onChange={setSettlement} disabled={settlementDisabled} options={[
-            { label: '全部', value: 'all' }, { label: 'Flat Fee', value: 'flat_fee' }, { label: 'Profit Share', value: 'profit_share' },
-          ]} />
+          <Select
+            value={effectiveSettlement}
+            onChange={setSettlement}
+            disabled={settlementDisabled}
+            options={[
+              { label: '全部', value: 'all' },
+              { label: 'Flat Fee', value: 'flat_fee' },
+              { label: 'Profit Share', value: 'profit_share' },
+            ]}
+          />
         </FilterItem>
         <FilterItem label="统计时间" wide>
-          <DateRangeInput from={dateFrom} to={dateTo} onFromChange={setDateFrom} onToChange={setDateTo} />
+          <DateRangeInput
+            from={dateFrom}
+            to={dateTo}
+            onFromChange={setDateFrom}
+            onToChange={setDateTo}
+          />
         </FilterItem>
       </FilterBar>
 
       {preSourceUid && (
-        <Box bg="rgba(10,186,181,0.05)" border="1px solid" borderColor="theme" px="16px" py="8px" borderRadius="4px" mb="24px">
-          <Text fontSize="14px" color="theme">当前筛选：来源用户 = {preSourceUid}</Text>
+        <Box
+          bg="rgba(10,186,181,0.05)"
+          border="1px solid"
+          borderColor="theme"
+          px="16px"
+          py="8px"
+          borderRadius="4px"
+          mb="24px"
+        >
+          <Text fontSize="14px" color="theme">
+            当前筛选：来源用户 = {preSourceUid}
+          </Text>
         </Box>
       )}
 
       <Flex align="center" gap="48px" mb="32px" flexWrap="wrap">
         <Box flexShrink={0}>
-          <Text fontSize="13px" color="gray.200" mb="8px" textTransform="uppercase" letterSpacing="0.5px">累计返佣（已到账）</Text>
+          <Text
+            fontSize="13px"
+            color="gray.200"
+            mb="8px"
+            textTransform="uppercase"
+            letterSpacing="0.5px"
+          >
+            累计返佣（已到账）
+          </Text>
           <Flex gap="32px" align="baseline">
             <Box>
-              <Text fontSize="36px" fontFamily="ISB" color="theme" lineHeight="1" textShadow="0 0 24px rgba(10,186,181,0.2)">
+              <Text
+                fontSize="36px"
+                fontFamily="ISB"
+                color="theme"
+                lineHeight="1"
+                textShadow="0 0 24px rgba(10,186,181,0.2)"
+              >
                 {fmtAmount(paidAgg.totalUsdt, { style: 'thousand' })}
               </Text>
-              <Text fontSize="12px" color="gray.100" mt="4px">USDT</Text>
+              <Text fontSize="12px" color="gray.100" mt="4px">
+                USDT
+              </Text>
             </Box>
             <Box>
-              <Text fontSize="36px" fontFamily="ISB" color="theme" lineHeight="1" textShadow="0 0 24px rgba(10,186,181,0.2)">
+              <Text
+                fontSize="36px"
+                fontFamily="ISB"
+                color="theme"
+                lineHeight="1"
+                textShadow="0 0 24px rgba(10,186,181,0.2)"
+              >
                 {fmtAmount(paidAgg.totalUsdc, { style: 'thousand' })}
               </Text>
-              <Text fontSize="12px" color="gray.100" mt="4px">USDC</Text>
+              <Text fontSize="12px" color="gray.100" mt="4px">
+                USDC
+              </Text>
             </Box>
           </Flex>
-          <Text fontSize="12px" color="gray.100" mt="8px">返佣实时到账，双币种不合并</Text>
+          <Text fontSize="12px" color="gray.100" mt="8px">
+            返佣实时到账，双币种不合并
+          </Text>
         </Box>
         <Box flex={1}>
           <InlineStatsBar stats={globalBreakdown} />
@@ -302,30 +483,75 @@ export default function RevenueCenter() {
 
         <Tabs.Content value="0">
           <DataTable
-            data={daily} columns={dailyColumns}
+            data={daily}
+            columns={dailyColumns}
             getRowKey={r => r.date}
             isLoading={dailyQ.isLoading}
-            error={dailyQ.isError ? { message: toError(dailyQ.error).message, retry: () => dailyQ.refetch() } : null}
-            footer={<Text fontSize="12px" color="gray.200" mt="8px">佣金包含直推返佣和平台奖励，交易额仅统计直推用户的交易，两者不构成简单的比例关系。</Text>}
+            error={
+              dailyQ.isError
+                ? { message: toError(dailyQ.error).message, retry: () => dailyQ.refetch() }
+                : null
+            }
+            footer={
+              <Text fontSize="12px" color="gray.200" mt="8px">
+                佣金包含直推返佣和平台奖励，交易额仅统计直推用户的交易，两者不构成简单的比例关系。
+              </Text>
+            }
           />
         </Tabs.Content>
         <Tabs.Content value="1">
           <DataTable
-            data={filteredRecords} columns={recordColumns}
+            data={filteredRecords}
+            columns={recordColumns}
             getRowKey={r => r.id}
             isLoading={recordsQ.isLoading}
-            error={recordsQ.isError ? { message: toError(recordsQ.error).message, retry: () => recordsQ.refetch() } : null}
+            error={
+              recordsQ.isError
+                ? { message: toError(recordsQ.error).message, retry: () => recordsQ.refetch() }
+                : null
+            }
           />
         </Tabs.Content>
         <Tabs.Content value="2">
           <Box bg="bg.200" border="1px solid" borderColor="border.100" borderRadius="8px" p="32px">
-            <Text fontFamily="ISB" fontSize="18px" mb="24px" color="text.100" letterSpacing="-0.5px">当前结算方式配置</Text>
+            <Text
+              fontFamily="ISB"
+              fontSize="18px"
+              mb="24px"
+              color="text.100"
+              letterSpacing="-0.5px"
+            >
+              当前结算方式配置
+            </Text>
             <Flex gap="48px">
-              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">结算方式</Text><Text fontSize="16px" fontFamily="ISB" color="text.100">{cfgQ.data?.method ?? '—'}</Text></Box>
-              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">结算频率</Text><Text fontSize="16px" fontFamily="ISB" color="text.100">{cfgQ.data?.frequency ?? '—'}</Text></Box>
-              <Box><Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">默认结算币种</Text><Text fontSize="16px" fontFamily="ISB" color="theme">{cfgQ.data?.coin ?? '—'}</Text></Box>
+              <Box>
+                <Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">
+                  结算方式
+                </Text>
+                <Text fontSize="16px" fontFamily="ISB" color="text.100">
+                  {cfgQ.data?.method ?? '—'}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">
+                  结算频率
+                </Text>
+                <Text fontSize="16px" fontFamily="ISB" color="text.100">
+                  {cfgQ.data?.frequency ?? '—'}
+                </Text>
+              </Box>
+              <Box>
+                <Text fontSize="13px" color="gray.200" mb="4px" textTransform="uppercase">
+                  默认结算币种
+                </Text>
+                <Text fontSize="16px" fontFamily="ISB" color="theme">
+                  {cfgQ.data?.coin ?? '—'}
+                </Text>
+              </Box>
             </Flex>
-            <Text fontSize="13px" color="gray.200" mt="32px">结算方式由管理员在内部后台设定，代理商前台仅展示、不可修改。</Text>
+            <Text fontSize="13px" color="gray.200" mt="32px">
+              结算方式由管理员在内部后台设定，代理商前台仅展示、不可修改。
+            </Text>
           </Box>
         </Tabs.Content>
       </Tabs.Root>

@@ -20,7 +20,11 @@ export function setAccessTokenGetter(getter: TokenGetter | null) {
 }
 
 export class ApiError extends Error {
-  constructor(public errno: number, message: string, public raw?: unknown) {
+  constructor(
+    public errno: number,
+    message: string,
+    public raw?: unknown,
+  ) {
     super(message)
     this.name = 'ApiError'
   }
@@ -37,7 +41,12 @@ export class ApiError extends Error {
 export function toError(err: unknown, fallback = '未知错误'): Error {
   if (err instanceof Error) return err
   if (typeof err === 'string') return new Error(err)
-  if (err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string') {
+  if (
+    err &&
+    typeof err === 'object' &&
+    'message' in err &&
+    typeof (err as { message: unknown }).message === 'string'
+  ) {
     return new Error((err as { message: string }).message)
   }
   return new Error(fallback)

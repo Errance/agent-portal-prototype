@@ -6,11 +6,7 @@
  * - 复制时用 `URL` 规范化后的 href，避免原始字符串里的 trailing 内容被一同复制
  */
 
-const ALLOWED_HOSTS = new Set([
-  'app.turboflow.io',
-  'turboflow.io',
-  'www.turboflow.io',
-])
+const ALLOWED_HOSTS = new Set(['app.turboflow.io', 'turboflow.io', 'www.turboflow.io'])
 
 /** ASCII 控制字符（0x00-0x1F、0x7F）和全角空白等不可打印字符 */
 // eslint-disable-next-line no-control-regex

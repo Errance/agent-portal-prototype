@@ -6,11 +6,7 @@ import { system } from '@/theme'
 export function Provider(props: ThemeProviderProps) {
   return (
     <ChakraProvider value={system}>
-      <ThemeProvider
-        attribute="class"
-        disableTransitionOnChange
-        {...props}
-      />
+      <ThemeProvider attribute="class" disableTransitionOnChange {...props} />
     </ChakraProvider>
   )
 }

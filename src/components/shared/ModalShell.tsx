@@ -22,7 +22,10 @@ interface Props extends Omit<BoxProps, 'title'> {
  * - 注意：本实现尚未做完整焦点陷阱，只保证 Tab 起点在面板内
  */
 export default function ModalShell({
-  open, onClose, width = '480px', children,
+  open,
+  onClose,
+  width = '480px',
+  children,
   borderColor = 'border.200',
   boxShadow = '0 16px 40px rgba(0,0,0,0.1)',
   ariaLabelledBy,
@@ -35,7 +38,7 @@ export default function ModalShell({
   useEffect(() => {
     if (!open) return
     // 记录触发元素以便关闭时还原焦点
-    prevFocusRef.current = (document.activeElement as HTMLElement | null)
+    prevFocusRef.current = document.activeElement as HTMLElement | null
     // 把焦点移入面板（下一个 tick 等挂载完成）
     const id = setTimeout(() => {
       panelRef.current?.focus()

@@ -1,0 +1,9 @@
+dist
+node_modules
+coverage
+public
+*.tsbuildinfo
+
+# 保留手写 Markdown 的排版（含表格、缩进示例块等）
+*.md
+docs/**/*.md

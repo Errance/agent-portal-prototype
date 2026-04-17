@@ -8,7 +8,9 @@ interface Props {
 export default function ErrorState({ message, onRetry }: Props) {
   return (
     <Flex direction="column" align="center" justify="center" py="64px" gap="12px">
-      <Text fontSize="14px" color="red.100">{message || '数据加载失败'}</Text>
+      <Text fontSize="14px" color="red.100">
+        {message || '数据加载失败'}
+      </Text>
       {onRetry && (
         <Box
           as="button"

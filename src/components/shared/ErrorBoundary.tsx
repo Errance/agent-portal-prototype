@@ -1,8 +1,12 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
 import { Box, Flex, Text } from '@chakra-ui/react'
 
-interface Props { children: ReactNode }
-interface State { error: Error | null }
+interface Props {
+  children: ReactNode
+}
+interface State {
+  error: Error | null
+}
 
 /**
  * 根级 Error Boundary（审计 M10）。
@@ -21,7 +25,7 @@ export default class ErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     if (import.meta.env.DEV) {
-      // eslint-disable-next-line no-console
+       
       console.error('[ErrorBoundary]', error, info)
     }
     // TODO: Sentry.captureException(error, { extra: { componentStack: info.componentStack } })
@@ -36,20 +40,36 @@ export default class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <Flex minH="100vh" bg="bg.100" align="center" justify="center" p="24px">
-          <Box maxW="520px" bg="bg.200" border="1px solid" borderColor="border.100"
-            borderRadius="8px" p="32px" textAlign="center">
-            <Text fontSize="40px" mb="16px" role="img" aria-label="错误">⚠️</Text>
-            <Text fontFamily="ISB" fontSize="20px" color="text.100" mb="12px">页面出错了</Text>
+          <Box
+            maxW="520px"
+            bg="bg.200"
+            border="1px solid"
+            borderColor="border.100"
+            borderRadius="8px"
+            p="32px"
+            textAlign="center"
+          >
+            <Text fontSize="40px" mb="16px" role="img" aria-label="错误">
+              ⚠️
+            </Text>
+            <Text fontFamily="ISB" fontSize="20px" color="text.100" mb="12px">
+              页面出错了
+            </Text>
             <Text fontSize="14px" color="gray.100" mb="24px" wordBreak="break-word">
               {this.state.error.message || '未知错误，请刷新页面重试'}
             </Text>
             <Box
               as="button"
               onClick={this.handleReload}
-              px="24px" py="10px"
-              bg="theme" color="#FFFFFF"
-              borderRadius="4px" fontSize="14px" fontFamily="ISB"
-              cursor="pointer" transition="all 0.2s"
+              px="24px"
+              py="10px"
+              bg="theme"
+              color="#FFFFFF"
+              borderRadius="4px"
+              fontSize="14px"
+              fontFamily="ISB"
+              cursor="pointer"
+              transition="all 0.2s"
               _hover={{ bg: '#089995', boxShadow: '0 0 12px rgba(10,186,181,0.3)' }}
             >
               刷新页面

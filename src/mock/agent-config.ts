@@ -13,9 +13,9 @@ export const agentConfig = {
   selfRebateEnabled: true,
   tradeVisibility: 'full' as TradeVisibility,
   isNewAgent: false,
-  currentFlatFeeRate: 1.50,
-  currentProfitShareRate: 0.0080,
-  currentEventRate: 1.20,
+  currentFlatFeeRate: 1.5,
+  currentProfitShareRate: 0.008,
+  currentEventRate: 1.2,
   agentName: '王大拿BG',
   agentLevel: 3 as AgentLevel,
 }

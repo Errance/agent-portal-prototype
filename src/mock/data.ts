@@ -1,10 +1,19 @@
-import type {
-  DashboardKPI, InviteCodeSummary,
-  Invitee, SubAgent, DailyRevenue, CommissionRecord,
-  PerpPosition, PerpOrder, EventOrder, InviteCode, TransferRecord,
-  SettlementConfig, InviteStats,
-} from '@/types/domain'
 import { agentConfig } from './agent-config'
+import type {
+  DashboardKPI,
+  InviteCodeSummary,
+  Invitee,
+  SubAgent,
+  DailyRevenue,
+  CommissionRecord,
+  PerpPosition,
+  PerpOrder,
+  EventOrder,
+  InviteCode,
+  TransferRecord,
+  SettlementConfig,
+  InviteStats,
+} from '@/types/domain'
 import { createRng } from '@/utils/prng'
 import { dateDaysAgoShanghai } from '@/utils/tz'
 
@@ -39,9 +48,9 @@ export { agentConfig }
 export const inviteCodeSummary: InviteCodeSummary[] = Array.from({ length: 8 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
   registrations: pickInt(5, 105),
-  flatFeeRate: rand(0.10, 0.60),
-  profitShareRate: randPs(0.0010, 0.0060),
-  eventRate: rand(0.20, 1.00),
+  flatFeeRate: rand(0.1, 0.6),
+  profitShareRate: randPs(0.001, 0.006),
+  eventRate: rand(0.2, 1.0),
 }))
 
 // ---- 用户池（uid + 身份）：所有下游表从这里 pick -----------------------
@@ -69,9 +78,11 @@ export const invitees: Invitee[] = [
     registeredAt: '2025-01-15 10:30:00',
     remark: '我自己',
     isSelf: true,
-    selfRebateAmount: 245.60,
-    flatFeeCommUsdt: 0, flatFeeCommUsdc: 0,
-    profitShareCommUsdt: 0, profitShareCommUsdc: 0,
+    selfRebateAmount: 245.6,
+    flatFeeCommUsdt: 0,
+    flatFeeCommUsdc: 0,
+    profitShareCommUsdt: 0,
+    profitShareCommUsdc: 0,
     eventCommission: 0,
   },
   ...userPool.map((u, i) => {
@@ -97,9 +108,9 @@ export const invitees: Invitee[] = [
 export const subAgents: SubAgent[] = Array.from({ length: 15 }, (_, i) => ({
   uid: uid(200 + i),
   nickname: `Agent_${String.fromCharCode(65 + i)}`,
-  flatFeeRate: rand(0.10, 0.60),
-  profitShareRate: randPs(0.0010, 0.0060),
-  eventRate: rand(0.20, 0.90),
+  flatFeeRate: rand(0.1, 0.6),
+  profitShareRate: randPs(0.001, 0.006),
+  eventRate: rand(0.2, 0.9),
   registeredAt: date(pickInt(0, 179)),
   directCommUsdt: rand(50, 8000),
   directCommUsdc: rand(20, 3000),
@@ -186,13 +197,13 @@ export const eventHistory: EventOrder[] = Array.from({ length: 30 }, () => ({
 
 export const inviteCodes: InviteCode[] = Array.from({ length: 20 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
-  status: i % 7 === 0 ? 'revoked' as const : 'active' as const,
+  status: i % 7 === 0 ? ('revoked' as const) : ('active' as const),
   myFlatFeeRate: agentConfig.currentFlatFeeRate,
-  subFlatFeeRate: rand(0.10, agentConfig.currentFlatFeeRate - 0.01),
+  subFlatFeeRate: rand(0.1, agentConfig.currentFlatFeeRate - 0.01),
   myProfitShareRate: agentConfig.currentProfitShareRate,
-  subProfitShareRate: randPs(0.0010, agentConfig.currentProfitShareRate - 0.0001),
+  subProfitShareRate: randPs(0.001, agentConfig.currentProfitShareRate - 0.0001),
   myEventRate: agentConfig.currentEventRate,
-  subEventRate: rand(0.20, agentConfig.currentEventRate - 0.01),
+  subEventRate: rand(0.2, agentConfig.currentEventRate - 0.01),
   registrations: pickInt(2, 81),
   firstDepositCount: pickInt(1, 40),
   firstTradeCount: pickInt(1, 30),
@@ -232,7 +243,7 @@ export const transferRecords: TransferRecord[] = Array.from({ length: 40 }, () =
 // ---- Dashboard KPI（审计 M11：从上面的源数据派生，和 RevenueCenter/FriendsCenter/
 // OnchainTransfers 共享同一事实源，保证 "今日" 口径在多个页面之间完全一致） --------
 
-const todayDate = dailyRevenue[0].date          // YYYY-MM-DD
+const todayDate = dailyRevenue[0].date // YYYY-MM-DD
 const yesterdayDate = dailyRevenue[1].date
 
 function changePct(t: number, y: number): number {
@@ -247,14 +258,24 @@ function sumBy<T>(list: T[], pred: (x: T) => number): number {
 
 // 注册数
 const regsToday = invitees.filter(u => !u.isSelf && u.registeredAt.startsWith(todayDate)).length
-const regsYesterday = invitees.filter(u => !u.isSelf && u.registeredAt.startsWith(yesterdayDate)).length
+const regsYesterday = invitees.filter(
+  u => !u.isSelf && u.registeredAt.startsWith(yesterdayDate),
+).length
 
 // 净充值 = 成功 deposit − 成功 withdrawal（与 OnchainTransfers `aggregate` 同一规则）
 const transfersSucceeded = transferRecords.filter(r => r.status === 'success')
 const netDeposit = (day: string) => {
   const rows = transfersSucceeded.filter(r => r.time.startsWith(day))
-  return sumBy(rows.filter(r => r.type === 'deposit'), r => r.amount)
-    - sumBy(rows.filter(r => r.type === 'withdrawal'), r => r.amount)
+  return (
+    sumBy(
+      rows.filter(r => r.type === 'deposit'),
+      r => r.amount,
+    ) -
+    sumBy(
+      rows.filter(r => r.type === 'withdrawal'),
+      r => r.amount,
+    )
+  )
 }
 const netDepositToday = netDeposit(todayDate)
 const netDepositYesterday = netDeposit(yesterdayDate)
@@ -262,8 +283,8 @@ const netDepositYesterday = netDeposit(yesterdayDate)
 // 直推佣金 / 平台奖励（按 USDT 口径，与 RevenueCenter aggregateCommissions.totalUsdt 同源）
 const commByType = (day: string, type: 'direct' | 'platform_reward') =>
   sumBy(
-    commissionRecords.filter(r =>
-      r.time.startsWith(day) && r.sourceType === type && r.settlementCoin === 'USDT',
+    commissionRecords.filter(
+      r => r.time.startsWith(day) && r.sourceType === type && r.settlementCoin === 'USDT',
     ),
     r => r.commissionAmount,
   )
@@ -278,31 +299,45 @@ const yesterday = dailyRevenue[1]
 
 export const dashboardKPI: DashboardKPI[] = [
   {
-    label: '今日注册数', value: regsToday, unit: '人',
+    label: '今日注册数',
+    value: regsToday,
+    unit: '人',
     changePercent: changePct(regsToday, regsYesterday),
   },
   {
-    label: '今日净充值', value: +netDepositToday.toFixed(2), unit: 'USDT',
+    label: '今日净充值',
+    value: +netDepositToday.toFixed(2),
+    unit: 'USDT',
     changePercent: changePct(netDepositToday, netDepositYesterday),
   },
   {
-    label: '今日 Flat Fee', value: +today.flatFeeCommUsdt.toFixed(2), unit: 'USDT',
+    label: '今日 Flat Fee',
+    value: +today.flatFeeCommUsdt.toFixed(2),
+    unit: 'USDT',
     changePercent: changePct(today.flatFeeCommUsdt, yesterday.flatFeeCommUsdt),
   },
   {
-    label: '今日 PS 有效交易量', value: +today.psTradeVolUsdt.toFixed(2), unit: 'USDT',
+    label: '今日 PS 有效交易量',
+    value: +today.psTradeVolUsdt.toFixed(2),
+    unit: 'USDT',
     changePercent: changePct(today.psTradeVolUsdt, yesterday.psTradeVolUsdt),
   },
   {
-    label: '今日事件合约交易量', value: +today.eventTradeVolume.toFixed(2), unit: 'USDT',
+    label: '今日事件合约交易量',
+    value: +today.eventTradeVolume.toFixed(2),
+    unit: 'USDT',
     changePercent: changePct(today.eventTradeVolume, yesterday.eventTradeVolume),
   },
   {
-    label: '今日佣金（直推）', value: +directUsdtToday.toFixed(2), unit: 'USDT',
+    label: '今日佣金（直推）',
+    value: +directUsdtToday.toFixed(2),
+    unit: 'USDT',
     changePercent: changePct(directUsdtToday, directUsdtYesterday),
   },
   {
-    label: '今日平台奖励', value: +platformUsdtToday.toFixed(2), unit: 'USDT',
+    label: '今日平台奖励',
+    value: +platformUsdtToday.toFixed(2),
+    unit: 'USDT',
     changePercent: changePct(platformUsdtToday, platformUsdtYesterday),
   },
 ]
