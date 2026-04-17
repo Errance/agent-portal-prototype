@@ -29,13 +29,13 @@ const randPs = (min: number, max: number) => Math.round((Math.random() * (max - 
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 
 export const dashboardKPI: DashboardKPI[] = [
-  { label: '今日注册数', value: 23, unit: '人', changePercent: 15.0, note: '伞下全量' },
-  { label: '今日净充值', value: 45280.50, unit: 'USDT', changePercent: -8.3, note: '伞下全量' },
-  { label: '今日 Flat Fee', value: 1256.80, unit: 'USDT', changePercent: 12.5, note: '伞下全量' },
-  { label: '今日 PS 有效交易量', value: 892340.00, unit: 'USDT', changePercent: 5.2, note: '伞下全量' },
-  { label: '今日事件合约交易量', value: 156720.00, unit: 'USDT', changePercent: 9.8, note: '伞下全量' },
-  { label: '今日佣金（直推）', value: 3842.65, unit: 'USDT', changePercent: 22.1, note: '仅一级直推' },
-  { label: '今日平台奖励', value: 1280.40, unit: 'USDT', changePercent: 18.5, note: '伞下间接返佣' },
+  { label: '今日注册数', value: 23, unit: '人', changePercent: 15.0 },
+  { label: '今日净充值', value: 45280.50, unit: 'USDT', changePercent: -8.3 },
+  { label: '今日 Flat Fee', value: 1256.80, unit: 'USDT', changePercent: 12.5 },
+  { label: '今日 PS 有效交易量', value: 892340.00, unit: 'USDT', changePercent: 5.2 },
+  { label: '今日事件合约交易量', value: 156720.00, unit: 'USDT', changePercent: 9.8 },
+  { label: '今日佣金（直推）', value: 3842.65, unit: 'USDT', changePercent: 22.1 },
+  { label: '今日平台奖励', value: 1280.40, unit: 'USDT', changePercent: 18.5 },
 ]
 
 export const inviteCodeSummary: InviteCodeSummary[] = Array.from({ length: 8 }, (_, i) => ({

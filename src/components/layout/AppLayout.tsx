@@ -28,8 +28,9 @@ export default function AppLayout() {
 
   return (
     <Flex minH="100vh" flexDir="column" bg="bg.100">
-      <Box as="header" bg="bg.200" w="100%" h="72px" flexShrink={0} position="sticky" top={0} zIndex={100} borderBottom="1px solid" borderColor="border.100">
-        <Flex h="100%" align="center" px="40px" maxW="100%">
+      <Box as="header" w="100%" h="72px" flexShrink={0} position="sticky" top={0} zIndex={100}
+           bg="rgba(255, 255, 255, 0.85)" backdropFilter="blur(12px)" borderBottom="1px solid" borderColor="border.100">
+        <Flex h="100%" align="center" px={{ base: "24px", lg: "40px", xl: "80px" }} maxW="1920px" mx="auto">
           <Text
             fontFamily="ISB"
             fontSize="20px"
@@ -42,17 +43,19 @@ export default function AppLayout() {
             TurboFlow
           </Text>
 
-          <Box w="1px" h="24px" bg="border.200" mx="28px" flexShrink={0} />
+          <Box w="1px" h="24px" bg="border.200" mx="32px" flexShrink={0} />
 
-          <Flex gap="32px" align="center" flex={1} overflow="auto">
+          <Flex gap="32px" align="center" flex={1} overflow="auto" h="100%">
             {visibleTabs.map(tab => {
               const isActive = tab.path === '/'
                 ? location.pathname === '/'
                 : location.pathname.startsWith(tab.path)
               return (
-                <Text
+                <Flex
                   key={tab.path}
                   as="button"
+                  h="100%"
+                  align="center"
                   fontSize="16px"
                   fontFamily="ISB"
                   color={isActive ? 'nav.active' : 'nav.inactive'}
@@ -60,13 +63,16 @@ export default function AppLayout() {
                   border="none"
                   cursor="pointer"
                   whiteSpace="nowrap"
-                  lineHeight="16px"
                   transition="color 0.15s"
                   _hover={{ color: 'nav.active' }}
                   onClick={() => navigate(tab.path)}
+                  position="relative"
                 >
                   {tab.label}
-                </Text>
+                  {isActive && (
+                    <Box position="absolute" bottom={0} left={0} right={0} h="2px" bg="theme" boxShadow="0 -2px 10px rgba(10,186,181,0.2)" />
+                  )}
+                </Flex>
               )
             })}
           </Flex>
@@ -80,8 +86,8 @@ export default function AppLayout() {
         maxW="1920px"
         w="100%"
         mx="auto"
-        px="120px"
-        pt="24px"
+        px={{ base: "24px", lg: "40px", xl: "80px" }}
+        pt="32px"
         pb="120px"
         flex={1}
       >

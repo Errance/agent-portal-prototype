@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { Box, Text } from '@chakra-ui/react'
+import { Box, Flex, Text, HStack } from '@chakra-ui/react'
 import DataTable, { type Column } from '@/components/shared/DataTable'
 import StatusBadge from '@/components/shared/StatusBadge'
 import InlineStatsBar from '@/components/shared/InlineStatsBar'
@@ -49,19 +49,57 @@ export default function OnchainTransfers() {
   }, [filtered])
 
   const columns: Column<TransferRecord>[] = [
-    { key: 'uid', label: '用户 UID', render: r => r.uid },
-    { key: 'level', label: '用户等级', render: r => r.userLevel === 'sub_agent' ? '子代理' : '普通用户' },
-    { key: 'sub', label: '子代理名称/UID', render: r => r.subAgentUid ?? '—' },
-    { key: 'channel', label: '渠道名称', render: r => r.channel },
-    { key: 'type', label: '充提类型', render: r => r.type === 'deposit' ? '充值' : '提现' },
-    { key: 'subType', label: '充提子类型', render: r => r.subType === 'normal' ? '普通' : '内部转账' },
-    { key: 'amt', label: '数量（USDT）', render: r => r.amount.toFixed(2), sortable: true, sortKey: r => r.amount },
-    { key: 'status', label: '状态', render: r => <StatusBadge type="transfer" value={r.status} /> },
-    { key: 'time', label: '时间', render: r => r.time },
+    {
+      key: 'user', label: '用户 (UID)',
+      render: r => (
+        <Box>
+          <Text color="text.100" fontFamily="ISB" fontSize="15px">{r.uid}</Text>
+          <Text fontSize="12px" color="gray.200" mt="2px">{r.userLevel === 'sub_agent' ? '子代理' : '普通用户'}</Text>
+        </Box>
+      ),
+    },
+    {
+      key: 'sub', label: '归属子代理',
+      render: r => <Text color="text.100">{r.subAgentUid ?? '—'}</Text>
+    },
+    {
+      key: 'type', label: '充提类型',
+      render: r => (
+        <HStack gap="6px" align="center">
+          <Text color={r.type === 'deposit' ? 'theme' : 'text.100'} fontFamily="ISB" fontSize="15px">
+            {r.type === 'deposit' ? '充值' : '提现'}
+          </Text>
+          {r.subType === 'internal_transfer' && <Text fontSize="10px" bg="bg.200" border="1px solid" borderColor="border.100" color="gray.100" px="4px" py="2px" borderRadius="2px">内部转账</Text>}
+        </HStack>
+      ),
+    },
+    {
+      key: 'channel', label: '渠道',
+      render: r => <Text fontSize="13px" color="text.100">{r.channel}</Text>,
+    },
+    {
+      key: 'amt', label: '数量 (USDT)',
+      align: 'right',
+      render: r => <Text fontFamily="ISB" fontSize="16px" color="text.100">{r.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}</Text>,
+      sortable: true, sortKey: r => r.amount,
+      minW: '140px',
+    },
+    {
+      key: 'status', label: '状态',
+      align: 'right',
+      render: r => <StatusBadge type="transfer" value={r.status} />,
+    },
+    {
+      key: 'time', label: '时间',
+      align: 'right',
+      render: r => <Text fontSize="13px" color="gray.200">{r.time}</Text>,
+    },
   ]
 
   return (
     <Box>
+      <Text fontFamily="ISB" fontSize="24px" color="text.100" letterSpacing="-0.5px" mb="24px">链上充提</Text>
+
       <FilterBar
         onSearch={() => {}}
         onReset={() => { setUid(''); setType('all'); setSubType('all'); setDateFrom(''); setDateTo(''); setUserLevel('all') }}
@@ -90,7 +128,9 @@ export default function OnchainTransfers() {
       <InlineStatsBar stats={globalStats} />
       {hasFilter && <InlineStatsBar title="筛选结果" stats={filteredStatsData} />}
 
-      <DataTable data={filtered} columns={columns} />
+      <Box mt="24px">
+        <DataTable data={filtered} columns={columns} />
+      </Box>
     </Box>
   )
 }

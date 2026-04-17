@@ -10,6 +10,7 @@ export interface Column<T> {
   sortKey?: (row: T) => number | string
   width?: string
   minW?: string
+  align?: 'left' | 'center' | 'right'
 }
 
 interface DataTableProps<T> {
@@ -60,31 +61,35 @@ export default function DataTable<T>({
               {columns.map((col, ci) => (
                 <Table.ColumnHeader
                   key={col.key}
-                  bg="transparent"
+                  bg="rgba(0,0,0,0.02)"
                   border={0}
                   borderBottom="1px solid"
                   borderColor="border.100"
-                  color="gray.100"
-                  fontSize="14px"
+                  color="gray.200"
+                  fontSize="12px"
                   fontWeight="500"
+                  textTransform="uppercase"
+                  letterSpacing="0.5px"
                   py="12px"
-                  px="12px"
+                  px="16px"
                   whiteSpace="nowrap"
                   minW={col.minW}
                   w={col.width}
+                  textAlign={col.align || 'left'}
                   cursor={col.sortable ? 'pointer' : 'default'}
                   onClick={() => col.sortable && handleSort(col.key)}
-                  _hover={col.sortable ? { color: 'text.100' } : {}}
+                  _hover={col.sortable ? { color: 'text.100', bg: 'rgba(0,0,0,0.04)' } : {}}
+                  transition="all 0.2s"
                   {...(stickyRight && ci === columns.length - 1 ? {
                     position: 'sticky' as const, right: 0, zIndex: 2,
-                    bg: '#F4F5F7',
-                    boxShadow: '-4px 0 8px rgba(0,0,0,0.04)',
+                    bg: 'bg.200',
+                    boxShadow: '-8px 0 16px rgba(0,0,0,0.04)',
                   } : {})}
                 >
-                  <Flex align="center" gap={1}>
+                  <Flex align="center" gap={2} justify={col.align === 'right' ? 'flex-end' : col.align === 'center' ? 'center' : 'flex-start'}>
                     {col.label}
                     {col.sortable && sortKey === col.key && (
-                      <Text fontSize="12px">{sortAsc ? '↑' : '↓'}</Text>
+                      <Text fontSize="12px" color="theme">{sortAsc ? '↑' : '↓'}</Text>
                     )}
                   </Flex>
                 </Table.ColumnHeader>
@@ -96,7 +101,8 @@ export default function DataTable<T>({
               <Table.Row
                 key={ri}
                 bg="transparent"
-                _hover={{ bg: 'bg.300' }}
+                transition="background 0.2s"
+                _hover={{ bg: 'rgba(0,0,0,0.02)' }}
               >
                 {columns.map((col, ci) => (
                   <Table.Cell
@@ -104,15 +110,17 @@ export default function DataTable<T>({
                     border={0}
                     borderBottom="1px solid"
                     borderColor="border.100"
-                    px="12px"
-                    py="12px"
+                    px="16px"
+                    py="16px"
                     fontSize="14px"
                     color="text.100"
                     whiteSpace="nowrap"
+                    textAlign={col.align || 'left'}
                     {...(stickyRight && ci === columns.length - 1 ? {
                       position: 'sticky' as const, right: 0,
                       bg: 'bg.200',
-                      boxShadow: '-4px 0 8px rgba(0,0,0,0.04)',
+                      boxShadow: '-8px 0 16px rgba(0,0,0,0.04)',
+                      _groupHover: { bg: 'bg.100' } // Fallback for hover state if supported
                     } : {})}
                   >
                     {col.render(row, ri)}
@@ -124,19 +132,19 @@ export default function DataTable<T>({
         </Table.Root>
       </Box>
 
-      {footer && <Box mt={2} px={2}>{footer}</Box>}
+      {footer && <Box mt={4} px={4}>{footer}</Box>}
 
       {sorted.length > pageSize && (
-        <Flex justify="flex-end" align="center" mt="16px" gap="12px">
-          <Text fontSize="14px" color="gray.100">
-            {safeP}
+        <Flex justify="flex-end" align="center" mt="24px" gap="16px">
+          <Text fontSize="13px" color="gray.200">
+            {safeP} / {totalPages}
           </Text>
-          <HStack gap="4px">
+          <HStack gap="8px">
             <PageBtn label="‹" disabled={safeP <= 1} onClick={() => setPage(safeP - 1)} />
             <PageBtn label="›" disabled={safeP >= totalPages} onClick={() => setPage(safeP + 1)} />
           </HStack>
-          <Text fontSize="14px" color="gray.100">
-            {(safeP - 1) * pageSize + 1}–{Math.min(safeP * pageSize, sorted.length)} · 共 {sorted.length} 条
+          <Text fontSize="13px" color="gray.200">
+            {(safeP - 1) * pageSize + 1}–{Math.min(safeP * pageSize, sorted.length)} / {sorted.length}
           </Text>
         </Flex>
       )}
@@ -150,21 +158,21 @@ function PageBtn({ label, disabled, onClick }: {
   return (
     <Box
       as="button"
-      w="28px"
-      h="28px"
+      w="32px"
+      h="32px"
       display="flex"
       alignItems="center"
       justifyContent="center"
-      fontSize="14px"
-      borderRadius="6px"
-      bg="bg.200"
-      color={disabled ? 'gray.100' : 'text.100'}
+      fontSize="16px"
+      borderRadius="4px"
+      bg="transparent"
+      color={disabled ? 'gray.200' : 'text.100'}
       border="1px solid"
-      borderColor="border.100"
-      opacity={disabled ? 0.4 : 1}
+      borderColor={disabled ? 'transparent' : 'border.100'}
       cursor={disabled ? 'not-allowed' : 'pointer'}
       onClick={disabled ? undefined : onClick}
-      _hover={disabled ? {} : { bg: 'bg.100' }}
+      transition="all 0.2s"
+      _hover={disabled ? {} : { bg: 'bg.100', borderColor: 'border.200' }}
     >
       {label}
     </Box>
