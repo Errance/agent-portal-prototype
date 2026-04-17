@@ -1,113 +1,36 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
-import { Box, Flex, Text } from '@chakra-ui/react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { Box, Flex } from '@chakra-ui/react'
 import { useAuth } from '@/auth'
 
 /**
- * 路由守卫：未登录时触发 `auth.login()`，未登录期间渲染"极轻 blur 背景页"作为
- * modal 的幕布；登录错误通过全局 `AuthToast` 展示（参见 src/auth/AuthToast.tsx），
- * 不再在此渲染卡片。
+ * 路由守卫：未登录时不渲染任何业务 UI，只展示纯 spinner；同时自动触发一次
+ * `auth.login()` 弹出 Privy modal。
  *
- * 审计 F1/F3 修复：
- * - 旧版在未登录时总是渲染一张"需要登录"卡片作为 modal 背景，视觉上和 Privy
- *   modal 功能重复；modal 关闭后又得靠卡片上的按钮重新打开，体验反直觉。
- * - 新版：未登录一律显示极简幕布（logo + 一行指引），自动触发一次 modal；
- *   用户主动取消或发生错误时，点击任意背景区域即可重弹 modal（backdrop click）。
- *   详细的错误文案和"重新登录"按钮由 Toast 承担。
+ * 配合 Privy `useLogin.onError` 里对 `exited_auth_flow` 的 re-trigger
+ * （见 src/auth/privy.tsx），用户关闭 modal 会立刻被再弹一次——效果上等于
+ * **modal 不可关闭**，业务 UI 永远不会在"未登录"状态被看到。
  *
- * 防循环：effect 用 `useRef` 一次性锁 auto-trigger；`auth.isLoading` 期间等待，
- * 由 PrivyAuthBridge 在 `auto-exchange` / `loginError` 逻辑里决定是否继续。
+ * 防止 effect 重复触发：`autoLoginFiredRef` 一次锁。真正的登出走 UserMenu →
+ * `auth.logout()` → `window.location.reload()`，reload 重置 ref，auto-trigger
+ * 重新生效，modal 再次弹出。
  */
 export default function RequireAuth({ children }: { children: ReactNode }) {
   const auth = useAuth()
-  /**
-   * 自动 trigger Privy modal 只在整个页面生命周期内执行**一次**：
-   * - 初次加载、未登录：弹 modal（用户想登录）
-   * - 已经 auto-trigger 过（无论成功 / 关闭 / 登出）：保持 blur 页面、
-   *   等用户显式点击背景或 UserMenu 里的登录重试
-   *
-   * 关键：一旦用户成功登录过、再登出，我们**不再** auto-trigger。
-   * 否则因为 Privy 的 `/sessions/logout` 跨域失败 (`privy.authenticated`
-   * 残留 true) + `openLoginModal` 里 early return 的组合，会立刻让
-   * auto-exchange 再拿一把 JWT 把用户"偷偷登回来"。
-   *
-   * "成功登录过后再出问题" 的被动场景（比如 JWT 过期 → 401 →
-   * passive logout）走的是另一条路径：`AuthToast` 给用户一个"重新登录"
-   * 按钮；用户点 = 显式 gesture，会走 `openLoginModal` 清掉 justLoggedOut。
-   */
   const autoLoginFiredRef = useRef(false)
-
-  /**
-   * "正在打开登录窗口..."过渡状态。
-   *
-   * Privy SDK 首次弹 modal 会懒加载一个 chunk（`LandingScreen-*.js`），
-   * 从 ready → modal 可见之间有 0.5–1.5s 网络时间。这段时间里我们
-   * 把空白 blur 页换成带 spinner 的 "正在打开登录窗口..."，让用户感知
-   * 到系统在工作，避免"点了登出看了半天 blur 页"的困惑。
-   *
-   * 设计上是 soft 的：2 秒超时后自动退回普通 blur 页（含点击重试提示），
-   * 不会永久卡在"正在打开..."。
-   */
-  const [openingModal, setOpeningModal] = useState(false)
-  /**
-   * 2 秒 "正在打开登录窗口..." 过渡 timer 用 ref 托管。
-   *
-   * 关键：**不**能把 clearTimeout 放 effect 的 cleanup 里。
-   *
-   * 这个 effect 依赖 `[auth.isLoading, auth.isAuthenticated, auth]`，
-   * 其中 `auth` 是 `useAuth()` 返回的 context value。PrivyAuthBridge 里的
-   * `value` memo 依赖 `user` / `login` / `logout` / `getAccessToken` 等会
-   * 随 Privy 内部 hydrate 变化的子状态，所以 `auth` ref 会在短时间内多次
-   * 变化，effect 反复 re-run。
-   *
-   * 如果把 `clearTimeout` 放在 effect cleanup 返回值里，timer 会在 6ms 内
-   * 就被 clean 掉；而下一次 effect run 因 `autoLoginFiredRef.current=true`
-   * 走 early-return，**既不** schedule 新 timer、**也不** reset
-   * `openingModal`——`openingModal` 永久卡 true（实测调试日志 H1 确认）。
-   *
-   * 所以 timer 改用 ref 托管：
-   * - schedule 前先 clearTimeout（防御）
-   * - timer 自己 fire 时置 null
-   * - `auth.isAuthenticated=true` 分支主动清（登录成功）
-   * - 专门一个 unmount-only useEffect 在组件销毁时清
-   */
-  const openingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
     if (auth.isLoading) return
     if (auth.isAuthenticated) {
-      // 认证过就永远不再 auto-trigger（防止 logout 被秒 re-login）
       autoLoginFiredRef.current = true
-      if (openingTimerRef.current) {
-        clearTimeout(openingTimerRef.current)
-        openingTimerRef.current = null
-      }
-      setOpeningModal(false)
       return
     }
     if (autoLoginFiredRef.current) return
     autoLoginFiredRef.current = true
-    setOpeningModal(true)
     void auth.login()
-    if (openingTimerRef.current) clearTimeout(openingTimerRef.current)
-    openingTimerRef.current = setTimeout(() => {
-      openingTimerRef.current = null
-      setOpeningModal(false)
-    }, 2000)
-    // 刻意**不**返回 cleanup：timer 生命周期由 ref 托管，不受 effect re-run 影响。
   }, [auth.isLoading, auth.isAuthenticated, auth])
 
-  // 组件 unmount 时才真的清 timer（RequireAuth 通常整个应用生命周期都在，
-  // 这个主要是 StrictMode / HMR 下的防御）。
-  useEffect(() => {
-    return () => {
-      if (openingTimerRef.current) {
-        clearTimeout(openingTimerRef.current)
-        openingTimerRef.current = null
-      }
-    }
-  }, [])
-
-  if (auth.isLoading) {
+  if (!auth.isAuthenticated) {
+    // 未登录一律纯 spinner。Privy modal 覆盖在上面，spinner 作为"加载态"背景。
     return (
       <Flex minH="100vh" bg="bg.100" align="center" justify="center">
         <Box
@@ -119,78 +42,8 @@ export default function RequireAuth({ children }: { children: ReactNode }) {
           borderRadius="full"
           animation="spin 0.9s linear infinite"
           css={{ '@keyframes spin': { to: { transform: 'rotate(360deg)' } } }}
-          aria-label="正在校验登录状态"
+          aria-label="正在登录"
         />
-      </Flex>
-    )
-  }
-
-  if (!auth.isAuthenticated) {
-    // 幕布点击 = 再次打开 Privy modal。对"用户关闭了 modal"或"换取失败后"的
-    // 重试场景都适用；真正的错误文案由 Toast 发出。
-    const handleBackdropClick = () => {
-      // 在"正在打开 modal"窗口期内重复点击可能会让 SDK 抖动，忽略
-      if (openingModal) return
-      setOpeningModal(true)
-      void auth.login()
-      setTimeout(() => setOpeningModal(false), 2000)
-    }
-    return (
-      <Flex
-        minH="100vh"
-        bg="bg.100"
-        align="center"
-        justify="center"
-        cursor="pointer"
-        onClick={handleBackdropClick}
-        onKeyDown={e => {
-          if (e.key === 'Enter' || e.key === ' ') handleBackdropClick()
-        }}
-        role="button"
-        tabIndex={0}
-        aria-label="登录"
-        css={{ backdropFilter: 'blur(8px)' }}
-      >
-        <Flex direction="column" align="center" maxW="400px" px="24px" textAlign="center">
-          <Text
-            fontFamily="ISB"
-            fontSize="28px"
-            color="theme"
-            letterSpacing="-0.5px"
-            mb="16px"
-            userSelect="none"
-          >
-            TurboFlow
-          </Text>
-          {openingModal ? (
-            <>
-              <Box
-                w="24px"
-                h="24px"
-                border="2px solid"
-                borderColor="border.100"
-                borderTopColor="theme"
-                borderRadius="full"
-                animation="spin 0.9s linear infinite"
-                css={{ '@keyframes spin': { to: { transform: 'rotate(360deg)' } } }}
-                mb="12px"
-                aria-hidden
-              />
-              <Text fontSize="13px" color="gray.100" lineHeight="1.6">
-                正在打开登录窗口…
-              </Text>
-            </>
-          ) : (
-            <>
-              <Text fontSize="13px" color="gray.100" lineHeight="1.6">
-                请在弹出窗口中完成登录以访问代理后台
-              </Text>
-              <Text fontSize="12px" color="gray.200" mt="8px" lineHeight="1.6">
-                若弹窗未出现，点击页面任意位置重试
-              </Text>
-            </>
-          )}
-        </Flex>
       </Flex>
     )
   }

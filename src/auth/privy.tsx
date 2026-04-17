@@ -223,11 +223,23 @@ function usePrivyExchange(options: UsePrivyExchangeOptions) {
     },
     onError: err => {
       const message = typeof err === 'string' ? err : (err as Error)?.message || 'Privy 登录出错'
-      // `exited_auth_flow` = 用户主动关闭 Privy modal，不是真正的错误；
-      // 直接忽略（不打 toast、不置 lastError），让用户点击背景页任意位置
-      // 即可重新唤起 modal（见 RequireAuth onClick）。
+      // `exited_auth_flow` = 用户主动关闭 Privy modal。我们不希望业务 UI
+      // 在未登录状态下被看到，所以这里立即**再次弹出 modal**，效果上等于
+      // modal 不可关闭。
+      //
+      // 用 queueMicrotask 而不是直接同步调用：onError 回调里 Privy SDK 自己
+      // 的 modal-close 状态还没 settle，同步调 `privy.login()` 会被判定为
+      // "modal 正在关闭中"、吞掉请求。放到下一个 microtask 让 SDK 先完成
+      // close transition，再重新打开，稳定有效。
       if (message === 'exited_auth_flow') {
-        console.info('[auth/privy] user closed Privy modal before completion')
+        console.info('[auth/privy] user closed Privy modal; re-opening (non-dismissable)')
+        queueMicrotask(() => {
+          try {
+            privy.login()
+          } catch {
+            // ignore — 极少数情况 SDK 还在 ready=false，下一次 effect 会兜底
+          }
+        })
         return
       }
       console.error('[auth/privy] useLogin onError:', err)
