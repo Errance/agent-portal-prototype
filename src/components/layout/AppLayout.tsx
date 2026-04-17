@@ -1,6 +1,6 @@
 import { Box, Flex, Text } from '@chakra-ui/react'
 import { lazy, Suspense } from 'react'
-import { Outlet, Navigate, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import FrozenBanner from './FrozenBanner'
 import GlobalFooter from './GlobalFooter'
 import { useAgent } from '@/context/AgentContext'
@@ -19,11 +19,11 @@ const tabs = [
 ]
 
 export default function AppLayout() {
-  const { isFrozen, isAgent, tradeVisibility } = useAgent()
+  // 身份校验已上移至 RequireAuth + RequireAgent（App.tsx routes），
+  // 这里只关心"已通过守卫的代理商看到的页面布局"。
+  const { isFrozen, tradeVisibility } = useAgent()
   const location = useLocation()
   const navigate = useNavigate()
-
-  if (!isAgent) return <Navigate to="/not-agent" replace />
 
   const visibleTabs = tabs.filter(t => {
     if (t.path === '/trading' && tradeVisibility === 'hidden') return false

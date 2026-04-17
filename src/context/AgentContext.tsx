@@ -1,5 +1,6 @@
-import { createContext, useContext, type ReactNode } from 'react'
+import { createContext, useContext, useMemo, type ReactNode } from 'react'
 import { useAgentStatus } from '@/hooks/useAgentStatus'
+import { useAuth } from '@/auth'
 
 /**
  * Agent 身份 / 状态 / 费率的全局上下文。
@@ -18,12 +19,26 @@ import { useAgentStatus } from '@/hooks/useAgentStatus'
  *    → `useAgentMe` 重新拉取失败 → 路由切到登录入口（或 Privy modal）。
  */
 
-type AgentContextType = ReturnType<typeof useAgentStatus>
+type AgentContextType = ReturnType<typeof useAgentStatus> & {
+  /**
+   * 当前登录用户 id（来自 AuthProvider）。
+   * 将来 `useAgentMe` 以此作为 queryKey 的一部分：
+   *   useQuery({ queryKey: ['agent', 'me', userId], queryFn: ... })
+   * Privy + 后端 /agent/me 就绪后，整个 AgentContext 会重构为 Query-driven，
+   * 这里是对接点占位。
+   */
+  userId: string | null
+}
 
 const AgentContext = createContext<AgentContextType | null>(null)
 
 export function AgentProvider({ children }: { children: ReactNode }) {
-  const value = useAgentStatus()
+  const status = useAgentStatus()
+  const auth = useAuth()
+  const value = useMemo<AgentContextType>(
+    () => ({ ...status, userId: auth.user?.userId ?? null }),
+    [status, auth.user],
+  )
   return <AgentContext.Provider value={value}>{children}</AgentContext.Provider>
 }
 

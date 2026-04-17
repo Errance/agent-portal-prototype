@@ -7,6 +7,18 @@ export interface ApiResponse<T> {
   data: T
 }
 
+/**
+ * 业务 JWT 注入钩子（Pre-Privy 准备）。
+ * 实际 token 由 `src/auth/*Provider` 注册进来，`apiFetch` 不直接依赖 auth 实现，
+ * 便于后续把 Stub 换成 Privy 版本。
+ */
+type TokenGetter = () => Promise<string | null>
+let currentTokenGetter: TokenGetter | null = null
+
+export function setAccessTokenGetter(getter: TokenGetter | null) {
+  currentTokenGetter = getter
+}
+
 export class ApiError extends Error {
   constructor(public errno: number, message: string, public raw?: unknown) {
     super(message)
@@ -50,12 +62,25 @@ export interface RequestOptions extends Omit<RequestInit, 'body' | 'signal'> {
 export async function apiFetch<T = unknown>(path: string, opts: RequestOptions = {}): Promise<T> {
   const { body, headers, method = 'GET', ...rest } = opts
   const url = path.startsWith('http') ? path : `${API_BASE}${path}`
+
+  // 业务 JWT 注入（若 AuthProvider 已注册 getter 则自动附带 Authorization header）
+  let authHeader: Record<string, string> = {}
+  if (currentTokenGetter) {
+    try {
+      const token = await currentTokenGetter()
+      if (token) authHeader = { Authorization: `Bearer ${token}` }
+    } catch {
+      // token 获取失败不阻断请求：后端会按未登录处理
+    }
+  }
+
   const res = await fetch(url, {
     method,
     credentials: 'include',
     ...rest,
     headers: {
       'Content-Type': 'application/json',
+      ...authHeader,
       ...(headers as Record<string, string>),
     },
     body: body ? JSON.stringify(body) : undefined,

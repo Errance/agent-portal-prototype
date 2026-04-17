@@ -4,6 +4,8 @@ import { Box, Flex, Text } from '@chakra-ui/react'
 import { AgentProvider } from '@/context/AgentContext'
 import AppLayout from '@/components/layout/AppLayout'
 import ErrorBoundary from '@/components/shared/ErrorBoundary'
+import RequireAuth from '@/components/auth/RequireAuth'
+import RequireAgent from '@/components/auth/RequireAgent'
 
 const Dashboard = lazy(() => import('@/pages/Dashboard'))
 const FriendsCenter = lazy(() => import('@/pages/FriendsCenter'))
@@ -34,7 +36,13 @@ function PageLoader() {
 const routes = [
   {
     path: '/',
-    element: <AppLayout />,
+    element: (
+      <RequireAuth>
+        <RequireAgent>
+          <AppLayout />
+        </RequireAgent>
+      </RequireAuth>
+    ),
     children: [
       { index: true, element: <Dashboard /> },
       { path: 'friends', element: <FriendsCenter /> },
@@ -44,7 +52,7 @@ const routes = [
       { path: 'transfers', element: <OnchainTransfers /> },
     ],
   },
-  { path: '/not-agent', element: <NotAgent /> },
+  { path: '/not-agent', element: <RequireAuth><NotAgent /></RequireAuth> },
 ]
 
 export default function App() {
