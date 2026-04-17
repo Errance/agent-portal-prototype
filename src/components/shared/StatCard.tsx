@@ -5,9 +5,10 @@ interface StatCardProps {
   value: string | number
   unit?: string
   changePercent?: number
+  note?: string
 }
 
-export default function StatCard({ label, value, unit, changePercent }: StatCardProps) {
+export default function StatCard({ label, value, unit, changePercent, note }: StatCardProps) {
   const isPositive = changePercent !== undefined && changePercent >= 0
   const formatted = typeof value === 'number'
     ? value.toLocaleString('en-US', { minimumFractionDigits: value % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 })
@@ -27,7 +28,14 @@ export default function StatCard({ label, value, unit, changePercent }: StatCard
         pb="9px"
         mb="2px"
       >
-        <Text fontSize="14px" color="gray.100" lineHeight="22px">{label}</Text>
+        <Flex align="center" gap="6px">
+          <Text fontSize="14px" color="gray.100" lineHeight="22px">{label}</Text>
+          {note && (
+            <Text fontSize="11px" color="gray.200" bg="bg.100" px="6px" py="1px" borderRadius="4px" whiteSpace="nowrap">
+              {note}
+            </Text>
+          )}
+        </Flex>
       </Box>
 
       <Flex align="baseline" gap={2} pt="5px">

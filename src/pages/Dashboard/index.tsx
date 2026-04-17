@@ -12,11 +12,11 @@ const LEVEL_NAMES: Record<AgentLevel, string> = {
 }
 
 const columns: Column<InviteCodeSummary>[] = [
-  { key: 'code', label: '邀请码', render: r => <Text color="theme" fontFamily="ISB">{r.code}</Text> },
+  { key: 'code', label: '推广码', render: r => <Text color="theme" fontFamily="ISB">{r.code}</Text> },
   { key: 'regs', label: '注册人数', render: r => r.registrations, sortable: true, sortKey: r => r.registrations },
-  { key: 'ffRate', label: 'Flat Fee 比例', render: r => `${r.flatFeeRate}%` },
-  { key: 'psRate', label: 'Profit Share 比例', render: r => `${r.profitShareRate}%` },
-  { key: 'eventRate', label: '事件返佣比例', render: r => `${r.eventRate}%` },
+  { key: 'ffRate', label: 'Flat Fee 比例', render: r => `${r.flatFeeRate.toFixed(2)}%` },
+  { key: 'psRate', label: 'Profit Share 比例', render: r => `${r.profitShareRate.toFixed(4)}%` },
+  { key: 'eventRate', label: '事件返佣比例', render: r => `${r.eventRate.toFixed(2)}%` },
 ]
 
 export default function Dashboard() {
@@ -58,7 +58,7 @@ export default function Dashboard() {
         >
           <Text fontFamily="ISB" fontSize="15px" color="text.100" mb="8px">欢迎成为 TurboFlow 代理商！</Text>
           <Text fontSize="14px" color="gray.100" mb="12px">
-            创建您的第一个邀请码，开始发展下级用户并获取返佣收益。
+            创建您的第一个推广码，开始发展下级用户并获取返佣收益。
           </Text>
           <HStack gap="12px">
             <Link to="/invite">
@@ -69,7 +69,7 @@ export default function Dashboard() {
                 borderRadius="6px" fontSize="14px" fontFamily="ISB"
                 cursor="pointer" _hover={{ opacity: 0.85 }}
               >
-                创建邀请码
+                创建推广码
               </Box>
             </Link>
             <Box
@@ -95,6 +95,7 @@ export default function Dashboard() {
             value={kpi.value}
             unit={kpi.unit}
             changePercent={kpi.changePercent}
+            note={kpi.note}
           />
         ))}
       </Grid>
@@ -106,7 +107,7 @@ export default function Dashboard() {
         p="20px"
       >
         <Flex justify="space-between" align="center" mb="16px">
-          <Text fontFamily="ISB" fontSize="16px" color="text.100">邀请链接</Text>
+          <Text fontFamily="ISB" fontSize="16px" color="text.100">推广链接</Text>
           <Link to="/invite">
             <Box
               as="button"

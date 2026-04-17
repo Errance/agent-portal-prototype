@@ -10,7 +10,7 @@ const tabs = [
   { label: '好友中心', path: '/friends' },
   { label: '收益中心', path: '/revenue' },
   { label: '交易中心', path: '/trading' },
-  { label: '邀请推广', path: '/invite' },
+  { label: '推广管理', path: '/invite' },
   { label: '链上充提', path: '/transfers' },
 ]
 

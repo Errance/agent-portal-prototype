@@ -15,12 +15,14 @@ export type PositionSide = 'long' | 'short'
 export type OrderSubType = 'open' | 'close' | 'liquidation'
 export type OrderSide = 'buy' | 'sell'
 export type EventResult = 'win' | 'lose' | 'pending'
+export type PromoCodeStatus = 'active' | 'revoked'
 
 export interface DashboardKPI {
   label: string
   value: number
   unit: string
   changePercent: number
+  note?: string
 }
 
 export interface InviteCodeSummary {
@@ -40,8 +42,10 @@ export interface Invitee {
   remark: string
   isSelf?: boolean
   selfRebateAmount?: number
-  flatFeeCommission: number
-  profitShareCommission: number
+  flatFeeCommUsdt: number
+  flatFeeCommUsdc: number
+  profitShareCommUsdt: number
+  profitShareCommUsdc: number
   eventCommission: number
 }
 
@@ -52,20 +56,26 @@ export interface SubAgent {
   profitShareRate: number
   eventRate: number
   registeredAt: string
-  totalDirectCommission: number
+  directCommUsdt: number
+  directCommUsdc: number
+  platformRewardUsdt: number
+  platformRewardUsdc: number
 }
 
 export interface DailyRevenue {
   date: string
-  commission: number
-  ffTradeVolume: number
-  psTradeVolume: number
-  eventTradeVolume: number
-  flatFeeFee: number
-  perpCommission: number
-  flatFeeCommission: number
-  profitShareCommission: number
+  flatFeeCommUsdt: number
+  flatFeeCommUsdc: number
+  profitShareCommUsdt: number
+  profitShareCommUsdc: number
   eventCommission: number
+  ffTradeVolUsdt: number
+  ffTradeVolUsdc: number
+  psTradeVolUsdt: number
+  psTradeVolUsdc: number
+  eventTradeVolume: number
+  flatFeeFeeUsdt: number
+  flatFeeFeeUsdc: number
   payoutStatus: PayoutStatus
 }
 
@@ -119,6 +129,7 @@ export interface EventOrder {
 
 export interface InviteCode {
   code: string
+  status: PromoCodeStatus
   myFlatFeeRate: number
   subFlatFeeRate: number
   myProfitShareRate: number

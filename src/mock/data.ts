@@ -10,9 +10,9 @@ export const agentConfig = {
   selfRebateEnabled: true,
   tradeVisibility: 'full' as TradeVisibility,
   isNewAgent: false,
-  currentFlatFeeRate: 0.80,
-  currentProfitShareRate: 0.70,
-  currentEventRate: 1.2,
+  currentFlatFeeRate: 1.50,
+  currentProfitShareRate: 0.0080,
+  currentEventRate: 1.20,
   agentName: '王大拿BG',
   agentLevel: 3 as AgentLevel,
 }
@@ -25,23 +25,25 @@ const date = (daysAgo: number) => {
 }
 const dateOnly = (daysAgo: number) => date(daysAgo).slice(0, 10)
 const rand = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 100) / 100
+const randPs = (min: number, max: number) => Math.round((Math.random() * (max - min) + min) * 10000) / 10000
 const pick = <T,>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]
 
 export const dashboardKPI: DashboardKPI[] = [
-  { label: '今日注册数（人）', value: 23, unit: '人', changePercent: 15.0 },
-  { label: '今日净充值（USDT）', value: 45280.50, unit: 'USDT', changePercent: -8.3 },
-  { label: '今日 Flat Fee（USDT）', value: 1256.80, unit: 'USDT', changePercent: 12.5 },
-  { label: '今日 Profit Share 有效交易量（USDT）', value: 892340.00, unit: 'USDT', changePercent: 5.2 },
-  { label: '今日事件合约交易量（USDT）', value: 156720.00, unit: 'USDT', changePercent: 9.8 },
-  { label: '今日佣金（USDT）', value: 3842.65, unit: 'USDT', changePercent: 22.1 },
+  { label: '今日注册数', value: 23, unit: '人', changePercent: 15.0, note: '伞下全量' },
+  { label: '今日净充值', value: 45280.50, unit: 'USDT', changePercent: -8.3, note: '伞下全量' },
+  { label: '今日 Flat Fee', value: 1256.80, unit: 'USDT', changePercent: 12.5, note: '伞下全量' },
+  { label: '今日 PS 有效交易量', value: 892340.00, unit: 'USDT', changePercent: 5.2, note: '伞下全量' },
+  { label: '今日事件合约交易量', value: 156720.00, unit: 'USDT', changePercent: 9.8, note: '伞下全量' },
+  { label: '今日佣金（直推）', value: 3842.65, unit: 'USDT', changePercent: 22.1, note: '仅一级直推' },
+  { label: '今日平台奖励', value: 1280.40, unit: 'USDT', changePercent: 18.5, note: '伞下间接返佣' },
 ]
 
 export const inviteCodeSummary: InviteCodeSummary[] = Array.from({ length: 8 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
   registrations: Math.floor(Math.random() * 100) + 5,
-  flatFeeRate: rand(0.1, 0.6),
-  profitShareRate: rand(0.1, 0.5),
-  eventRate: rand(0.2, 1.0),
+  flatFeeRate: rand(0.10, 0.60),
+  profitShareRate: randPs(0.0010, 0.0060),
+  eventRate: rand(0.20, 1.00),
 }))
 
 export const invitees: Invitee[] = [
@@ -54,8 +56,8 @@ export const invitees: Invitee[] = [
     remark: '我自己',
     isSelf: true,
     selfRebateAmount: 245.60,
-    flatFeeCommission: 0,
-    profitShareCommission: 0,
+    flatFeeCommUsdt: 0, flatFeeCommUsdc: 0,
+    profitShareCommUsdt: 0, profitShareCommUsdc: 0,
     eventCommission: 0,
   },
   ...Array.from({ length: 50 }, (_, i) => {
@@ -68,8 +70,10 @@ export const invitees: Invitee[] = [
       tradeStatus: (traded ? 'traded' : 'not_traded') as const,
       registeredAt: date(Math.floor(Math.random() * 90)),
       remark: i % 5 === 0 ? `备注${i}` : '',
-      flatFeeCommission: traded ? rand(5, 500) : 0,
-      profitShareCommission: traded ? rand(3, 300) : 0,
+      flatFeeCommUsdt: traded ? rand(5, 400) : 0,
+      flatFeeCommUsdc: traded ? rand(2, 150) : 0,
+      profitShareCommUsdt: traded ? rand(3, 200) : 0,
+      profitShareCommUsdc: traded ? rand(1, 80) : 0,
       eventCommission: traded ? rand(1, 200) : 0,
     }
   }),
@@ -78,35 +82,32 @@ export const invitees: Invitee[] = [
 export const subAgents: SubAgent[] = Array.from({ length: 15 }, (_, i) => ({
   uid: uid(200 + i),
   nickname: `Agent_${String.fromCharCode(65 + i)}`,
-  flatFeeRate: rand(0.1, 0.6),
-  profitShareRate: rand(0.1, 0.5),
-  eventRate: rand(0.2, 0.9),
+  flatFeeRate: rand(0.10, 0.60),
+  profitShareRate: randPs(0.0010, 0.0060),
+  eventRate: rand(0.20, 0.90),
   registeredAt: date(Math.floor(Math.random() * 180)),
-  totalDirectCommission: rand(100, 15000),
+  directCommUsdt: rand(50, 8000),
+  directCommUsdc: rand(20, 3000),
+  platformRewardUsdt: rand(30, 5000),
+  platformRewardUsdc: rand(10, 2000),
 }))
 
-export const dailyRevenue: DailyRevenue[] = Array.from({ length: 30 }, (_, i) => {
-  const ff = rand(50, 800)
-  const ps = rand(30, 500)
-  const ev = rand(20, 400)
-  const ffVol = rand(30000, 300000)
-  const psVol = rand(20000, 200000)
-  const evVol = rand(10000, 150000)
-  const ffFee = rand(10, 200)
-  return {
-    date: dateOnly(i),
-    commission: +(ff + ps + ev).toFixed(2),
-    ffTradeVolume: ffVol,
-    psTradeVolume: psVol,
-    eventTradeVolume: evVol,
-    flatFeeFee: ffFee,
-    perpCommission: +(ff + ps).toFixed(2),
-    flatFeeCommission: ff,
-    profitShareCommission: ps,
-    eventCommission: ev,
-    payoutStatus: pick(['paid', 'frozen_pending'] as const),
-  }
-})
+export const dailyRevenue: DailyRevenue[] = Array.from({ length: 30 }, (_, i) => ({
+  date: dateOnly(i),
+  flatFeeCommUsdt: rand(40, 600),
+  flatFeeCommUsdc: rand(10, 200),
+  profitShareCommUsdt: rand(20, 400),
+  profitShareCommUsdc: rand(5, 150),
+  eventCommission: rand(20, 400),
+  ffTradeVolUsdt: rand(20000, 250000),
+  ffTradeVolUsdc: rand(5000, 80000),
+  psTradeVolUsdt: rand(15000, 180000),
+  psTradeVolUsdc: rand(3000, 50000),
+  eventTradeVolume: rand(10000, 150000),
+  flatFeeFeeUsdt: rand(8, 160),
+  flatFeeFeeUsdc: rand(2, 50),
+  payoutStatus: pick(['paid', 'frozen_pending'] as const),
+}))
 
 export const commissionRecords: CommissionRecord[] = Array.from({ length: 100 }, (_, i) => {
   const isDirect = Math.random() > 0.3
@@ -170,12 +171,13 @@ export const eventHistory: EventOrder[] = Array.from({ length: 30 }, (_, i) => (
 
 export const inviteCodes: InviteCode[] = Array.from({ length: 20 }, (_, i) => ({
   code: `TF${String(1000 + i)}`,
+  status: i % 7 === 0 ? 'revoked' as const : 'active' as const,
   myFlatFeeRate: agentConfig.currentFlatFeeRate,
-  subFlatFeeRate: rand(0.1, agentConfig.currentFlatFeeRate - 0.01),
+  subFlatFeeRate: rand(0.10, agentConfig.currentFlatFeeRate - 0.01),
   myProfitShareRate: agentConfig.currentProfitShareRate,
-  subProfitShareRate: rand(0.1, agentConfig.currentProfitShareRate - 0.01),
+  subProfitShareRate: randPs(0.0010, agentConfig.currentProfitShareRate - 0.0001),
   myEventRate: agentConfig.currentEventRate,
-  subEventRate: rand(0.2, agentConfig.currentEventRate - 0.01),
+  subEventRate: rand(0.20, agentConfig.currentEventRate - 0.01),
   registrations: Math.floor(Math.random() * 80) + 2,
   firstDepositCount: Math.floor(Math.random() * 40) + 1,
   firstTradeCount: Math.floor(Math.random() * 30) + 1,

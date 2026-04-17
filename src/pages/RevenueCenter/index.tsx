@@ -17,6 +17,8 @@ export default function RevenueCenter() {
   const [settlement, setSettlement] = useState('all')
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
+  const [expandVolume, setExpandVolume] = useState(false)
+  const [expandFee, setExpandFee] = useState(false)
 
   const settlementDisabled = productLine === 'event'
   const effectiveSettlement = settlementDisabled ? 'all' : settlement
@@ -58,19 +60,52 @@ export default function RevenueCenter() {
     ]
   }, [filteredRecords])
 
-  const dailyColumns: Column<DailyRevenue>[] = [
-    { key: 'date', label: '日期', render: r => r.date },
-    { key: 'commission', label: '佣金（USDT）', render: r => r.commission.toFixed(2), sortable: true, sortKey: r => r.commission },
-    { key: 'ffVol', label: 'FF 有效交易量', render: r => r.ffTradeVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }), sortable: true, sortKey: r => r.ffTradeVolume },
-    { key: 'psVol', label: 'PS 有效交易量', render: r => r.psTradeVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }), sortable: true, sortKey: r => r.psTradeVolume },
-    { key: 'evVol', label: '事件有效交易量', render: r => r.eventTradeVolume.toLocaleString('en-US', { minimumFractionDigits: 2 }), sortable: true, sortKey: r => r.eventTradeVolume },
-    { key: 'ffFee', label: 'FF 手续费', render: r => r.flatFeeFee.toFixed(2), sortable: true, sortKey: r => r.flatFeeFee },
-    { key: 'perp', label: '永续合约返佣', render: r => r.perpCommission.toFixed(2) },
-    { key: 'ff', label: 'Flat Fee 返佣', render: r => r.flatFeeCommission.toFixed(2) },
-    { key: 'ps', label: 'Profit Share 返佣', render: r => r.profitShareCommission.toFixed(2) },
-    { key: 'event', label: '事件合约返佣', render: r => r.eventCommission.toFixed(2) },
-    { key: 'status', label: '发放状态', render: r => <StatusBadge type="payout" value={r.payoutStatus} /> },
-  ]
+  const fmtNum = (v: number) => v.toLocaleString('en-US', { minimumFractionDigits: 2 })
+
+  const dailyColumns: Column<DailyRevenue>[] = useMemo(() => {
+    const cols: Column<DailyRevenue>[] = [
+      { key: 'date', label: '日期', render: r => r.date },
+      { key: 'ffCommUsdt', label: 'FF 返佣(USDT)', render: r => r.flatFeeCommUsdt.toFixed(2), sortable: true, sortKey: r => r.flatFeeCommUsdt },
+      { key: 'ffCommUsdc', label: 'FF 返佣(USDC)', render: r => r.flatFeeCommUsdc.toFixed(2), sortable: true, sortKey: r => r.flatFeeCommUsdc },
+      { key: 'psCommUsdt', label: 'PS 返佣(USDT)', render: r => r.profitShareCommUsdt.toFixed(2), sortable: true, sortKey: r => r.profitShareCommUsdt },
+      { key: 'psCommUsdc', label: 'PS 返佣(USDC)', render: r => r.profitShareCommUsdc.toFixed(2), sortable: true, sortKey: r => r.profitShareCommUsdc },
+      { key: 'evComm', label: '事件返佣(USDT)', render: r => r.eventCommission.toFixed(2), sortable: true, sortKey: r => r.eventCommission },
+    ]
+
+    if (expandVolume) {
+      cols.push(
+        { key: 'ffVolUsdt', label: 'FF 交易量(USDT)', render: r => fmtNum(r.ffTradeVolUsdt), sortable: true, sortKey: r => r.ffTradeVolUsdt },
+        { key: 'ffVolUsdc', label: 'FF 交易量(USDC)', render: r => fmtNum(r.ffTradeVolUsdc), sortable: true, sortKey: r => r.ffTradeVolUsdc },
+        { key: 'psVolUsdt', label: 'PS 交易量(USDT)', render: r => fmtNum(r.psTradeVolUsdt), sortable: true, sortKey: r => r.psTradeVolUsdt },
+        { key: 'psVolUsdc', label: 'PS 交易量(USDC)', render: r => fmtNum(r.psTradeVolUsdc), sortable: true, sortKey: r => r.psTradeVolUsdc },
+        { key: 'evVol', label: '事件交易量(USDT)', render: r => fmtNum(r.eventTradeVolume), sortable: true, sortKey: r => r.eventTradeVolume },
+      )
+    } else {
+      cols.push({
+        key: 'totalVol', label: '交易量合计(USDT)',
+        render: r => fmtNum(r.ffTradeVolUsdt + r.ffTradeVolUsdc + r.psTradeVolUsdt + r.psTradeVolUsdc + r.eventTradeVolume),
+        sortable: true,
+        sortKey: r => r.ffTradeVolUsdt + r.ffTradeVolUsdc + r.psTradeVolUsdt + r.psTradeVolUsdc + r.eventTradeVolume,
+      })
+    }
+
+    if (expandFee) {
+      cols.push(
+        { key: 'ffFeeUsdt', label: 'FF 手续费(USDT)', render: r => r.flatFeeFeeUsdt.toFixed(2), sortable: true, sortKey: r => r.flatFeeFeeUsdt },
+        { key: 'ffFeeUsdc', label: 'FF 手续费(USDC)', render: r => r.flatFeeFeeUsdc.toFixed(2), sortable: true, sortKey: r => r.flatFeeFeeUsdc },
+      )
+    } else {
+      cols.push({
+        key: 'totalFee', label: 'FF 手续费合计',
+        render: r => (r.flatFeeFeeUsdt + r.flatFeeFeeUsdc).toFixed(2),
+        sortable: true,
+        sortKey: r => r.flatFeeFeeUsdt + r.flatFeeFeeUsdc,
+      })
+    }
+
+    cols.push({ key: 'status', label: '发放状态', render: r => <StatusBadge type="payout" value={r.payoutStatus} /> })
+    return cols
+  }, [expandVolume, expandFee])
 
   const recordColumns: Column<CommissionRecord>[] = [
     { key: 'time', label: '时间', render: r => r.time },
@@ -91,6 +126,17 @@ export default function RevenueCenter() {
       _hover={{ color: 'nav.active' }}>
       {label}
     </Tabs.Trigger>
+  )
+
+  const toggleBtn = (label: string, active: boolean, onClick: () => void) => (
+    <Box as="button" px="10px" py="4px" fontSize="12px" fontFamily="ISB"
+      bg={active ? 'rgba(10,186,181,0.1)' : 'bg.100'}
+      color={active ? 'theme' : 'gray.100'}
+      border="1px solid" borderColor={active ? 'theme' : 'border.100'}
+      borderRadius="6px" cursor="pointer" onClick={onClick}
+      _hover={{ borderColor: 'theme' }}>
+      {label}
+    </Box>
   )
 
   return (
@@ -143,6 +189,11 @@ export default function RevenueCenter() {
         </Tabs.List>
 
         <Tabs.Content value="0">
+          <Flex gap="8px" mb="12px" align="center">
+            <Text fontSize="13px" color="gray.100">列展开：</Text>
+            {toggleBtn(expandVolume ? '收起交易量' : '展开交易量', expandVolume, () => setExpandVolume(v => !v))}
+            {toggleBtn(expandFee ? '收起手续费' : '展开手续费', expandFee, () => setExpandFee(v => !v))}
+          </Flex>
           <DataTable
             data={dailyRevenue} columns={dailyColumns}
             footer={<Text fontSize="12px" color="gray.100" mt="8px">佣金包含直推返佣和平台奖励，交易额仅统计直推用户的交易，两者不构成简单的比例关系。</Text>}
